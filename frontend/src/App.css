@@ -562,10 +562,60 @@ body {
   margin-bottom: 0;
 }
 
-.irys-id {
-  color: #8a2be2;
-  font-family: 'JetBrains Mono', monospace;
+.wallet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.wallet-balance {
   font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.warning-text {
+  color: #ffa500;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.small-text {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 1rem;
+}
+
+.blockchain-info {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tx-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #00ffff;
+  background: rgba(0, 255, 255, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+.irys-link {
+  background: none;
+  border: none;
+  color: #8a2be2;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  font-family: inherit;
+}
+
+.irys-link:hover {
+  color: #00ffff;
 }
 
 /* Loading Spinner */
