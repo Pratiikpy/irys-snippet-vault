@@ -736,7 +736,7 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
-    print("🚀 Starting Irys Snippet Vault API...")
+    print("🚀 Starting Irys Snippet Vault API with Social Features...")
     
     # Initialize Irys service
     irys_ready = await init_irys_service()
