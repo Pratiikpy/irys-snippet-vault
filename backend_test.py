@@ -530,7 +530,7 @@ class IrysSnippetVaultTester:
 
     def run_all_tests(self):
         """Run all API tests in sequence"""
-        print("🚀 Starting Irys Snippet Vault API Tests with Social Features")
+        print("🚀 Starting Irys Snippet Vault API Tests with Enhanced Content Creation")
         
         # Test root endpoint
         self.test_root_endpoint()
@@ -570,6 +570,47 @@ class IrysSnippetVaultTester:
                     print(f"✅ Found {len(snippets_data['snippets'])} snippets for the test wallet")
                 else:
                     print("⚠️ No snippets found for the test wallet")
+
+        print("\n" + "="*60)
+        print("🎨 TESTING ENHANCED CONTENT CREATION FEATURES")
+        print("="*60)
+
+        # Test text content processing
+        print("\n📝 Testing AI Text Analysis...")
+        self.test_process_text_content("text")
+        self.test_process_text_content("poetry")
+        self.test_process_text_content("quote")
+        
+        # Test enhanced summarize with different content types
+        print("\n🤖 Testing Enhanced AI Summarization...")
+        self.test_enhanced_summarize("web_snippet")
+        self.test_enhanced_summarize("text")
+        self.test_enhanced_summarize("poetry")
+        
+        # Test image processing
+        print("\n🖼️ Testing Image Processing...")
+        self.test_process_image_content()
+        
+        # Test Irys blockchain integration
+        print("\n⛓️ Testing Irys Blockchain Integration...")
+        irys_success, irys_response = self.test_irys_upload_simulation()
+        if irys_success:
+            print("✅ Irys blockchain upload working")
+            # Test querying after upload
+            self.test_irys_query()
+        else:
+            print("❌ Irys blockchain upload failed")
+        
+        # Test complete image workflow
+        print("\n🔄 Testing Complete Image Upload Workflow...")
+        workflow_success, workflow_data = self.test_full_image_workflow()
+        if workflow_success:
+            print("🎉 Complete image workflow successful!")
+        else:
+            print("❌ Image workflow failed")
+        
+        # Test error handling
+        self.test_error_handling()
 
         print("\n" + "="*60)
         print("🧑‍🤝‍🧑 TESTING SOCIAL FEATURES")
@@ -660,7 +701,7 @@ class IrysSnippetVaultTester:
         print("="*60)
         
         if self.tests_passed == self.tests_run:
-            print("🎉 ALL TESTS PASSED! Social features are working correctly.")
+            print("🎉 ALL TESTS PASSED! Enhanced content creation and social features are working correctly.")
         else:
             failed_tests = self.tests_run - self.tests_passed
             print(f"⚠️ {failed_tests} tests failed. Check the output above for details.")
