@@ -614,8 +614,15 @@ body {
   font-family: inherit;
 }
 
-.irys-link:hover {
-  color: #00ffff;
+.info-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.blockchain-info .info-text {
+  margin-top: 0.5rem;
 }
 
 /* Loading Spinner */
