@@ -308,12 +308,47 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
       {extractedData && summarizedData && (
         <div className="save-section">
           <div className="blockchain-info">
-            <h3>⛓️ Ready for Blockchain Storage</h3>
-            <p className="info-text">
-              <strong>Network:</strong> Irys Testnet<br/>
-              <strong>Storage:</strong> Permanent & Immutable<br/>
-              <strong>Cost:</strong> Paid with your ETH
-            </p>
+            <h3>⛓️ Ready for Irys Blockchain Storage</h3>
+            <div className="network-info">
+              <p className="info-text">
+                <strong>Network:</strong> Irys Devnet (Free Testing)<br/>
+                <strong>Storage:</strong> Permanent & Immutable<br/>
+                <strong>Gateway:</strong> devnet.irys.xyz<br/>
+                <strong>Cost:</strong> <span className="free-badge">FREE</span> on testnet
+              </p>
+            </div>
+          </div>
+          
+          <div className="network-selector">
+            <label>Choose Irys Network:</label>
+            <div className="radio-group">
+              <label className="radio-label">
+                <input
+                  type="radio"
+                  value="devnet"
+                  checked={network === 'devnet'}
+                  onChange={(e) => setNetwork(e.target.value)}
+                />
+                <div className="network-option">
+                  <strong>Devnet</strong> (devnet.irys.xyz)
+                  <br/>
+                  <small>Free • Testing • Same permanence</small>
+                </div>
+              </label>
+              <label className="radio-label">
+                <input
+                  type="radio"
+                  value="mainnet"
+                  checked={network === 'mainnet'}
+                  onChange={(e) => setNetwork(e.target.value)}
+                />
+                <div className="network-option">
+                  <strong>Mainnet</strong> (gateway.irys.xyz)
+                  <br/>
+                  <small>Paid • Production • Real ETH cost</small>
+                </div>
+              </label>
+            </div>
           </div>
           
           <NeonButton 
@@ -321,14 +356,35 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
             disabled={isSaving || !irysUploader}
             className="save-button"
           >
-            {isSaving ? <LoadingSpinner size="sm" /> : `💾 Save Permanently to Irys Blockchain`}
+            {isSaving ? <LoadingSpinner size="sm" /> : `💾 Save to Irys ${network === 'devnet' ? 'Devnet' : 'Mainnet'} (${network === 'devnet' ? 'FREE' : 'Paid'})`}
           </NeonButton>
           
-          <div className="warning-section">
-            <p className="warning-text">
-              ⚠️ <strong>PERMANENT STORAGE:</strong> Once saved, this data cannot be deleted or modified
-            </p>
+          <div className="blockchain-details">
+            <h4>📋 What happens when you save:</h4>
+            <ul className="save-details-list">
+              <li>🔐 <strong>Sign message:</strong> MetaMask will ask for signature</li>
+              <li>⛓️ <strong>Blockchain upload:</strong> Data stored permanently on Irys</li>
+              <li>🌐 <strong>Gateway access:</strong> Viewable at {network === 'devnet' ? 'devnet.irys.xyz' : 'gateway.irys.xyz'}</li>
+              <li>💰 <strong>Cost:</strong> {network === 'devnet' ? 'FREE (testnet)' : 'Small ETH fee (mainnet)'}</li>
+              <li>🔒 <strong>Permanent:</strong> Cannot be deleted or modified once saved</li>
+            </ul>
           </div>
+          
+          {network === 'devnet' && (
+            <div className="devnet-info">
+              <p className="success-text">
+                ✅ <strong>Devnet is FREE!</strong> Perfect for testing. Your data will still be permanently stored and accessible forever.
+              </p>
+            </div>
+          )}
+          
+          {network === 'mainnet' && (
+            <div className="warning-section">
+              <p className="warning-text">
+                ⚠️ <strong>MAINNET COSTS REAL ETH:</strong> Small fee required for permanent storage
+              </p>
+            </div>
+          )}
         </div>
       )}
     </GlassCard>
