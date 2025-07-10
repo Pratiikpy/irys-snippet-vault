@@ -285,7 +285,7 @@ class IrysSnippetVaultTester:
 
     def run_all_tests(self):
         """Run all API tests in sequence"""
-        print("🚀 Starting Irys Snippet Vault API Tests")
+        print("🚀 Starting Irys Snippet Vault API Tests with Social Features")
         
         # Test root endpoint
         self.test_root_endpoint()
@@ -325,9 +325,101 @@ class IrysSnippetVaultTester:
                     print(f"✅ Found {len(snippets_data['snippets'])} snippets for the test wallet")
                 else:
                     print("⚠️ No snippets found for the test wallet")
+
+        print("\n" + "="*60)
+        print("🧑‍🤝‍🧑 TESTING SOCIAL FEATURES")
+        print("="*60)
+
+        # Test user profile creation for both test users
+        print("\n📝 Testing User Profile Management...")
+        success1, profile1 = self.test_create_user_profile(
+            self.test_wallet_address_1, 
+            "alice_crypto", 
+            "Crypto enthusiast and snippet collector"
+        )
+        success2, profile2 = self.test_create_user_profile(
+            self.test_wallet_address_2, 
+            "bob_developer", 
+            "Full-stack developer sharing code snippets"
+        )
         
+        # Test getting user profiles
+        self.test_get_user_profile(self.test_wallet_address_1)
+        self.test_get_user_profile(self.test_wallet_address_2)
+
+        # Test social interactions
+        print("\n👥 Testing Social Interactions...")
+        
+        # Test follow functionality
+        follow_success, follow_response = self.test_follow_user()
+        if follow_success:
+            print("✅ Follow functionality working")
+            
+            # Test follow again (should return already following message)
+            self.test_follow_user()
+            
+            # Test unfollow
+            unfollow_success, unfollow_response = self.test_unfollow_user()
+            if unfollow_success:
+                print("✅ Unfollow functionality working")
+
+        # Test like functionality
+        print("\n❤️ Testing Like System...")
+        if self.test_snippet_id:
+            like_success, like_response = self.test_like_snippet()
+            if like_success:
+                print("✅ Like functionality working")
+                
+                # Test unlike (toggle functionality)
+                unlike_success, unlike_response = self.test_unlike_snippet()
+                if unlike_success:
+                    print("✅ Unlike (toggle) functionality working")
+
+        # Test comment system
+        print("\n💬 Testing Comment System...")
+        if self.test_snippet_id:
+            comment_success, comment_response = self.test_add_comment()
+            if comment_success:
+                print("✅ Comment creation working")
+                
+                # Test getting comments
+                get_comments_success, comments_data = self.test_get_comments()
+                if get_comments_success:
+                    if comments_data and "comments" in comments_data:
+                        print(f"✅ Found {len(comments_data['comments'])} comments")
+                    else:
+                        print("⚠️ No comments found")
+
+        # Test feed and discovery
+        print("\n🌐 Testing Feed and Discovery...")
+        
+        # Test public feed
+        feed_success, feed_data = self.test_public_feed()
+        if feed_success:
+            if feed_data and "feed" in feed_data:
+                print(f"✅ Public feed working - {len(feed_data['feed'])} items")
+            else:
+                print("⚠️ Public feed empty")
+
+        # Test user discovery
+        discover_success, discover_data = self.test_discover_users()
+        if discover_success:
+            if discover_data and "users" in discover_data:
+                print(f"✅ User discovery working - {len(discover_data['users'])} users")
+            else:
+                print("⚠️ No users found in discovery")
+
         # Print summary
-        print(f"\n📊 Tests passed: {self.tests_passed}/{self.tests_run}")
+        print("\n" + "="*60)
+        print(f"📊 FINAL TEST RESULTS: {self.tests_passed}/{self.tests_run} tests passed")
+        print("="*60)
+        
+        if self.tests_passed == self.tests_run:
+            print("🎉 ALL TESTS PASSED! Social features are working correctly.")
+        else:
+            failed_tests = self.tests_run - self.tests_passed
+            print(f"⚠️ {failed_tests} tests failed. Check the output above for details.")
+        
         return self.tests_passed == self.tests_run
 
 def main():
