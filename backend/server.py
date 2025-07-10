@@ -1003,6 +1003,23 @@ async def startup_event():
 async def shutdown_db_client():
     client.close()
 
-# Export the app for Vercel
-def handler(request):
-    return app
+# Serve React frontend static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Serve React app for all other routes
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str):
+    """Serve React app for all non-API routes"""
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+    
+    # Check if file exists in static directory
+    static_file_path = Path("static") / full_path
+    if static_file_path.exists() and static_file_path.is_file():
+        return FileResponse(static_file_path)
+    
+    # Fallback to index.html for React Router
+    return FileResponse("static/index.html")
+
+# Export the app for Railway
+app = app
