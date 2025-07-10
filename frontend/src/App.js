@@ -31,6 +31,383 @@ const LoadingSpinner = ({ size = "md" }) => (
   </div>
 );
 
+// Navigation Component
+const Navigation = ({ currentTab, onTabChange, userAddress }) => {
+  const tabs = [
+    { id: 'home', label: 'Home', icon: '🏠' },
+    { id: 'feed', label: 'Feed', icon: '📰' },
+    { id: 'profile', label: 'Profile', icon: '👤' },
+    { id: 'discover', label: 'Discover', icon: '🔍' }
+  ];
+
+  return (
+    <div className="navigation">
+      <div className="nav-tabs">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={`nav-tab ${currentTab === tab.id ? 'active' : ''}`}
+          >
+            <span className="tab-icon">{tab.icon}</span>
+            <span className="tab-label">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Public Feed Component
+const PublicFeed = ({ userAddress }) => {
+  const [feed, setFeed] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchPublicFeed();
+  }, []);
+
+  const fetchPublicFeed = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch(`${API}/feed/public`);
+      if (!response.ok) throw new Error('Failed to fetch feed');
+      const data = await response.json();
+      setFeed(data.feed || []);
+    } catch (error) {
+      console.error('Error fetching public feed:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLike = async (snippetId) => {
+    if (!userAddress) return;
+    
+    try {
+      const response = await fetch(`${API}/social/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_address: userAddress,
+          snippet_id: snippetId
+        })
+      });
+      
+      if (response.ok) {
+        // Refresh feed to update like status
+        fetchPublicFeed();
+      }
+    } catch (error) {
+      console.error('Error liking snippet:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="feed-container">
+        <div className="loading-container">
+          <LoadingSpinner size="lg" />
+          <p>Loading public feed...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="feed-container">
+        <div className="error-container">
+          <p>Error loading feed: {error}</p>
+          <NeonButton onClick={fetchPublicFeed}>Try Again</NeonButton>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="feed-container">
+      <div className="feed-header">
+        <h2>🌐 Public Feed</h2>
+        <p>Discover snippets from the community</p>
+      </div>
+      
+      {feed.length === 0 ? (
+        <div className="empty-feed">
+          <p>No snippets in the feed yet. Be the first to share!</p>
+        </div>
+      ) : (
+        <div className="feed-grid">
+          {feed.map((snippet) => (
+            <GlassCard key={snippet.id} className="feed-item">
+              <div className="snippet-header">
+                <div className="user-info">
+                  <span className="username">
+                    {snippet.username || `${snippet.wallet_address.slice(0, 6)}...${snippet.wallet_address.slice(-4)}`}
+                  </span>
+                  <span className="timestamp">
+                    {new Date(snippet.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <span className="network-badge">{snippet.network}</span>
+              </div>
+              
+              <h3 className="snippet-title">{snippet.title}</h3>
+              <p className="snippet-summary">{snippet.summary}</p>
+              
+              <div className="snippet-tags">
+                {snippet.tags && snippet.tags.map((tag, index) => (
+                  <span key={index} className="tag">{tag}</span>
+                ))}
+              </div>
+              
+              <div className="snippet-actions">
+                <button 
+                  onClick={() => window.open(snippet.url, '_blank')}
+                  className="action-button"
+                >
+                  🔗 View
+                </button>
+                <button 
+                  onClick={() => handleLike(snippet.irys_id)}
+                  className={`action-button like-button ${snippet.is_liked ? 'liked' : ''}`}
+                >
+                  ❤️ {snippet.likes_count || 0}
+                </button>
+                <button className="action-button">
+                  💬 {snippet.comments_count || 0}
+                </button>
+              </div>
+            </GlassCard>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// User Profile Component
+const UserProfile = ({ userAddress, signer }) => {
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ username: '', bio: '' });
+
+  useEffect(() => {
+    if (userAddress) {
+      fetchProfile();
+    }
+  }, [userAddress]);
+
+  const fetchProfile = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API}/users/${userAddress}`);
+      if (!response.ok) throw new Error('Failed to fetch profile');
+      const data = await response.json();
+      setProfile(data);
+      setEditForm({ username: data.username || '', bio: data.bio || '' });
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const response = await fetch(`${API}/users/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet_address: userAddress,
+          username: editForm.username,
+          bio: editForm.bio
+        })
+      });
+      
+      if (response.ok) {
+        setIsEditing(false);
+        fetchProfile();
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="profile-container">
+        <div className="loading-container">
+          <LoadingSpinner size="lg" />
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="profile-container">
+      <GlassCard className="profile-card">
+        <div className="profile-header">
+          <div className="profile-avatar">
+            {profile.username ? profile.username.charAt(0).toUpperCase() : '👤'}
+          </div>
+          <div className="profile-info">
+            {isEditing ? (
+              <div className="edit-form">
+                <input
+                  type="text"
+                  value={editForm.username}
+                  onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                  placeholder="Username"
+                  className="edit-input"
+                />
+                <textarea
+                  value={editForm.bio}
+                  onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
+                  placeholder="Bio"
+                  className="edit-textarea"
+                />
+                <div className="edit-actions">
+                  <NeonButton onClick={handleSaveProfile}>Save</NeonButton>
+                  <NeonButton variant="secondary" onClick={() => setIsEditing(false)}>Cancel</NeonButton>
+                </div>
+              </div>
+            ) : (
+              <div className="profile-display">
+                <h2>{profile.username || 'Anonymous User'}</h2>
+                <p className="wallet-address">{userAddress}</p>
+                <p className="bio">{profile.bio || 'No bio set'}</p>
+                <NeonButton onClick={() => setIsEditing(true)}>Edit Profile</NeonButton>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="profile-stats">
+          <div className="stat">
+            <span className="stat-number">{profile.snippets_count || 0}</span>
+            <span className="stat-label">Snippets</span>
+          </div>
+          <div className="stat">
+            <span className="stat-number">{profile.followers_count || 0}</span>
+            <span className="stat-label">Followers</span>
+          </div>
+          <div className="stat">
+            <span className="stat-number">{profile.following_count || 0}</span>
+            <span className="stat-label">Following</span>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+};
+
+// User Discovery Component
+const UserDiscovery = ({ userAddress }) => {
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API}/users/discover`);
+      if (!response.ok) throw new Error('Failed to fetch users');
+      const data = await response.json();
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFollow = async (targetAddress) => {
+    if (!userAddress) return;
+    
+    try {
+      const response = await fetch(`${API}/social/follow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          follower_address: userAddress,
+          following_address: targetAddress
+        })
+      });
+      
+      if (response.ok) {
+        // Refresh users list
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error('Error following user:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="discovery-container">
+        <div className="loading-container">
+          <LoadingSpinner size="lg" />
+          <p>Discovering users...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="discovery-container">
+      <div className="discovery-header">
+        <h2>🔍 Discover Users</h2>
+        <p>Find and follow other snippet creators</p>
+      </div>
+      
+      {users.length === 0 ? (
+        <div className="empty-discovery">
+          <p>No users to discover yet.</p>
+        </div>
+      ) : (
+        <div className="users-grid">
+          {users.map((user) => (
+            <GlassCard key={user.wallet_address} className="user-card">
+              <div className="user-avatar">
+                {user.username ? user.username.charAt(0).toUpperCase() : '👤'}
+              </div>
+              <h3>{user.username || 'Anonymous User'}</h3>
+              <p className="user-wallet">
+                {user.wallet_address.slice(0, 6)}...{user.wallet_address.slice(-4)}
+              </p>
+              <p className="user-bio">{user.bio || 'No bio'}</p>
+              
+              <div className="user-stats">
+                <span>{user.snippets_count || 0} snippets</span>
+                <span>{user.followers_count || 0} followers</span>
+              </div>
+              
+              {user.wallet_address !== userAddress && (
+                <NeonButton 
+                  onClick={() => handleFollow(user.wallet_address)}
+                  className="follow-button"
+                >
+                  Follow
+                </NeonButton>
+              )}
+            </GlassCard>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Real Irys Integration Helper
 const createIrysUploader = async (signer) => {
   try {
