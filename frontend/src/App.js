@@ -559,12 +559,30 @@ function App() {
                 <li>🎨 Beautiful Notion-style interface</li>
               </ul>
               <div className="demo-section">
-                <h3>🔥 Real Blockchain Storage</h3>
-                <p>Your snippets will be <strong>permanently stored</strong> on the Irys blockchain forever!</p>
+                <h3>🔥 Real Irys Blockchain Storage</h3>
+                <p>Your snippets will be <strong>permanently stored</strong> on Irys blockchain forever!</p>
+                <div className="network-comparison">
+                  <div className="network-card devnet">
+                    <h4>🆓 Devnet (Recommended)</h4>
+                    <ul>
+                      <li>✅ <strong>FREE</strong> to use</li>
+                      <li>✅ Same permanence as mainnet</li>
+                      <li>✅ Perfect for testing</li>
+                      <li>🌐 Access: devnet.irys.xyz</li>
+                    </ul>
+                  </div>
+                  <div className="network-card mainnet">
+                    <h4>💰 Mainnet (Production)</h4>
+                    <ul>
+                      <li>💸 Small ETH fees</li>
+                      <li>✅ Production network</li>
+                      <li>✅ Same features</li>
+                      <li>🌐 Access: gateway.irys.xyz</li>
+                    </ul>
+                  </div>
+                </div>
                 <p className="small-text">
-                  💰 <strong>Real ETH:</strong> Uses your actual ETH balance for blockchain transactions<br/>
-                  🌐 <strong>Global Access:</strong> View stored data at gateway.irys.xyz<br/>
-                  🔒 <strong>Immutable:</strong> Data cannot be deleted or modified once stored
+                  💡 <strong>Both networks store data permanently!</strong> Devnet is free and perfect for trying the app.
                 </p>
               </div>
             </GlassCard>
