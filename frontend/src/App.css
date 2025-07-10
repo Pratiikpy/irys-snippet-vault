@@ -461,21 +461,21 @@ body {
   gap: 1.5rem;
 }
 
-/* Snippet cards with custom cursor */
+/* Snippet cards with standard cursor */
 .snippet-card {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 1.5rem;
   transition: all 0.3s ease;
-  cursor: url('/cursor-cat.png') 16 16, auto;
+  cursor: default;
 }
 
 .snippet-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(0, 255, 255, 0.2);
   border-color: rgba(0, 255, 255, 0.3);
-  cursor: url('/cursor-cat-pointer.png') 16 16, pointer;
+  cursor: pointer;
 }
 
 .snippet-header {
