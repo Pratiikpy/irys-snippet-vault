@@ -164,7 +164,7 @@ body {
   font-weight: 600;
   font-size: 1rem;
   color: white;
-  cursor: url('/cursor-cat-pointer.png') 16 16, pointer;
+  cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
   position: relative;
