@@ -455,35 +455,64 @@ async def process_image_content(request: ImageContentRequest):
 
 @api_router.post("/summarize", response_model=SummarizeResponse)
 async def summarize_snippet(request: SummarizeRequest):
-    """Summarize snippet and generate tags using Claude AI."""
+    """Summarize content and generate tags using Claude AI."""
     try:
         claude_api_key = os.environ.get('CLAUDE_API_KEY')
         if not claude_api_key:
             raise HTTPException(status_code=500, detail="Claude API key not configured")
         
+        # Create appropriate system message based on content type
+        if request.content_type == "web_snippet":
+            system_message = "You are a text summarization expert. For each text snippet provided, you must respond with exactly one sentence summary followed by a pipe symbol '|' and then exactly 3 topical tags separated by commas. Format: 'Summary sentence here|tag1,tag2,tag3'"
+            content_to_analyze = request.snippet
+            user_prompt = f"Please summarize this web snippet from '{request.title}' ({request.url}) and provide 3 topical tags. Content: {content_to_analyze}"
+        else:
+            # For other content types, use the enhanced format with mood/theme
+            system_message = "You are a content analysis expert. For each content provided, respond with: one sentence summary, 3 topical tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+            content_to_analyze = request.content or request.snippet
+            user_prompt = f"Please analyze this {request.content_type} titled '{request.title}'. Content: {content_to_analyze}"
+        
         # Create Claude chat instance
         chat = LlmChat(
             api_key=claude_api_key,
             session_id=f"summarize-{uuid.uuid4()}",
-            system_message="You are a text summarization expert. For each text snippet provided, you must respond with exactly one sentence summary followed by a pipe symbol '|' and then exactly 3 topical tags separated by commas. Format: 'Summary sentence here|tag1,tag2,tag3'"
+            system_message=system_message
         ).with_model("anthropic", "claude-3-5-sonnet-20241022")
         
         # Create user message
-        user_message = UserMessage(
-            text=f"Please summarize this web snippet from '{request.title}' ({request.url}) and provide 3 topical tags. Content: {request.snippet}"
-        )
+        user_message = UserMessage(text=user_prompt)
         
         # Get response from Claude
         response = await chat.send_message(user_message)
         
-        # Parse response
-        if '|' in response:
-            summary, tags_str = response.split('|', 1)
-            tags = [tag.strip() for tag in tags_str.split(',')][:3]  # Ensure max 3 tags
+        # Parse response based on content type
+        if request.content_type == "web_snippet":
+            if '|' in response:
+                summary, tags_str = response.split('|', 1)
+                tags = [tag.strip() for tag in tags_str.split(',')][:3]
+            else:
+                summary = response.strip()
+                tags = ["web", "content", "snippet"]
+            mood = None
+            theme = None
         else:
-            # Fallback parsing
-            summary = response.strip()
-            tags = ["web", "content", "snippet"]
+            # Enhanced parsing for creative content
+            parts = response.split('|')
+            if len(parts) >= 4:
+                summary = parts[0].strip()
+                tags = [tag.strip() for tag in parts[1].split(',')][:3]
+                mood = parts[2].strip()
+                theme = parts[3].strip()
+            elif len(parts) >= 2:
+                summary = parts[0].strip()
+                tags = [tag.strip() for tag in parts[1].split(',')][:3]
+                mood = "neutral"
+                theme = "general"
+            else:
+                summary = response.strip()
+                tags = [request.content_type, "personal", "creative"]
+                mood = "neutral"
+                theme = "general"
         
         # Clean up summary
         summary = summary.strip()
@@ -492,11 +521,13 @@ async def summarize_snippet(request: SummarizeRequest):
         
         return SummarizeResponse(
             summary=summary,
-            tags=tags
+            tags=tags,
+            mood=mood,
+            theme=theme
         )
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error summarizing content: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error analyzing content: {str(e)}")
 
 @api_router.post("/irys-upload", response_model=IrysUploadResponse)
 async def upload_to_irys_blockchain(request: IrysUploadRequest):
