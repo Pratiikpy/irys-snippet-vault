@@ -26,5 +26,4 @@ typer>=0.9.0
 emergentintegrations
 beautifulsoup4>=4.12.0
 requests>=2.31.0
-@irys/upload
-@irys/upload-ethereum
+
