@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 import requests
 from bs4 import BeautifulSoup
 import re
-from emergentintegrations.llm.chat import LlmChat, UserMessage
 import subprocess
 import json
 import asyncio
