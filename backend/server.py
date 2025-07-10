@@ -47,15 +47,31 @@ class UrlSnippetResponse(BaseModel):
     url: str
     title: str
     snippet: str
+
+# New content creation models
+class TextContentRequest(BaseModel):
+    title: str
+    content: str
+    content_type: str = "text"  # text, poetry, thought, quote
+
+class ImageContentRequest(BaseModel):
+    title: str
+    image_data: str  # base64 encoded image
+    description: Optional[str] = None
+    content_type: str = "image"
     
 class SummarizeRequest(BaseModel):
-    snippet: str
-    url: str
+    snippet: Optional[str] = None
+    content: Optional[str] = None
     title: str
+    url: Optional[str] = None
+    content_type: str = "web_snippet"  # web_snippet, text, poetry, image, thought, quote
 
 class SummarizeResponse(BaseModel):
     summary: str
     tags: List[str]
+    mood: Optional[str] = None  # For poetry/text content
+    theme: Optional[str] = None  # For creative content
 
 class IrysUploadRequest(BaseModel):
     data: str
