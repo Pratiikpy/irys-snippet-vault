@@ -1,0 +1,173 @@
+@api_router.post("/process-text", response_model=SummarizeResponse)
+async def process_text_content(request: TextContentRequest):
+    """Process text/poetry content with AI analysis for mood and themes."""
+    try:
+        claude_api_key = os.environ.get('CLAUDE_API_KEY')
+        if not claude_api_key:
+            raise HTTPException(status_code=500, detail="Claude API key not configured")
+        
+        # Create appropriate prompt based on content type
+        if request.content_type == "poetry":
+            system_message = "You are a poetry analysis expert. For each poem provided, respond with: one sentence summary, 3 thematic tags, mood (one word like 'melancholic', 'joyful', 'contemplative'), and theme (one word like 'love', 'nature', 'loss'). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+            user_prompt = f"Please analyze this poem titled '{request.title}'. Content: {request.content}"
+        elif request.content_type == "quote":
+            system_message = "You are a quote analysis expert. For each quote provided, respond with: one sentence about its meaning, 3 topical tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+            user_prompt = f"Please analyze this quote titled '{request.title}'. Content: {request.content}"
+        else:  # general text/thought
+            system_message = "You are a text analysis expert. For each text provided, respond with: one sentence summary, 3 topical tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+            user_prompt = f"Please analyze this text titled '{request.title}'. Content: {request.content}"
+        
+        # Get response from Claude
+        response = await call_claude_api(claude_api_key, user_prompt, system_message)
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to get response from Claude API")
+        
+        # Parse response
+        parts = response.split('|')
+        if len(parts) >= 4:
+            summary = parts[0].strip()
+            tags = [tag.strip() for tag in parts[1].split(',')][:3]
+            mood = parts[2].strip()
+            theme = parts[3].strip()
+        else:
+            # Fallback parsing
+            summary = response.strip()
+            tags = [request.content_type, "creative", "personal"]
+            mood = "reflective"
+            theme = "personal"
+        
+        # Clean up summary
+        if not summary.endswith('.'):
+            summary += '.'
+        
+        return SummarizeResponse(
+            summary=summary,
+            tags=tags,
+            mood=mood,
+            theme=theme
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error analyzing content: {str(e)}")
+
+@api_router.post("/process-image", response_model=SummarizeResponse)
+async def process_image_content(request: ImageContentRequest):
+    """Process image content with AI description generation."""
+    try:
+        claude_api_key = os.environ.get('CLAUDE_API_KEY')
+        if not claude_api_key:
+            raise HTTPException(status_code=500, detail="Claude API key not configured")
+        
+        # For now, create a description based on title and user description
+        # In future, could integrate with vision AI for actual image analysis
+        
+        content_to_analyze = f"Image titled '{request.title}'"
+        if request.description:
+            content_to_analyze += f" with description: {request.description}"
+        
+        # Create system message and user prompt
+        system_message = "You are an image content expert. For image content provided, respond with: one sentence description/summary, 3 relevant tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+        user_prompt = f"Please analyze and describe this image content: {content_to_analyze}"
+        
+        # Get response from Claude
+        response = await call_claude_api(claude_api_key, user_prompt, system_message)
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to get response from Claude API")
+        
+        # Parse response
+        parts = response.split('|')
+        if len(parts) >= 4:
+            summary = parts[0].strip()
+            tags = [tag.strip() for tag in parts[1].split(',')][:3]
+            mood = parts[2].strip()
+            theme = parts[3].strip()
+        else:
+            # Fallback
+            summary = f"Image: {request.title}"
+            if request.description:
+                summary += f" - {request.description}"
+            tags = ["image", "visual", "memory"]
+            mood = "captured"
+            theme = "visual"
+        
+        # Clean up summary
+        if not summary.endswith('.'):
+            summary += '.'
+        
+        return SummarizeResponse(
+            summary=summary,
+            tags=tags,
+            mood=mood,
+            theme=theme
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
+
+@api_router.post("/summarize", response_model=SummarizeResponse)
+async def summarize_snippet(request: SummarizeRequest):
+    """Summarize content and generate tags using Claude AI."""
+    try:
+        claude_api_key = os.environ.get('CLAUDE_API_KEY')
+        if not claude_api_key:
+            raise HTTPException(status_code=500, detail="Claude API key not configured")
+        
+        # Create appropriate system message based on content type
+        if request.content_type == "web_snippet":
+            system_message = "You are a text summarization expert. For each text snippet provided, you must respond with exactly one sentence summary followed by a pipe symbol '|' and then exactly 3 topical tags separated by commas. Format: 'Summary sentence here|tag1,tag2,tag3'"
+            content_to_analyze = request.snippet
+            user_prompt = f"Please summarize this web snippet from '{request.title}' ({request.url}) and provide 3 topical tags. Content: {content_to_analyze}"
+        else:
+            # For other content types, use the enhanced format with mood/theme
+            system_message = "You are a content analysis expert. For each content provided, respond with: one sentence summary, 3 topical tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+            content_to_analyze = request.content or request.snippet
+            user_prompt = f"Please analyze this {request.content_type} titled '{request.title}'. Content: {content_to_analyze}"
+        
+        # Get response from Claude
+        response = await call_claude_api(claude_api_key, user_prompt, system_message)
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to get response from Claude API")
+        
+        # Parse response based on content type
+        if request.content_type == "web_snippet":
+            if '|' in response:
+                summary, tags_str = response.split('|', 1)
+                tags = [tag.strip() for tag in tags_str.split(',')][:3]
+            else:
+                summary = response.strip()
+                tags = ["web", "content", "snippet"]
+            mood = None
+            theme = None
+        else:
+            # Enhanced parsing for creative content
+            parts = response.split('|')
+            if len(parts) >= 4:
+                summary = parts[0].strip()
+                tags = [tag.strip() for tag in parts[1].split(',')][:3]
+                mood = parts[2].strip()
+                theme = parts[3].strip()
+            elif len(parts) >= 2:
+                summary = parts[0].strip()
+                tags = [tag.strip() for tag in parts[1].split(',')][:3]
+                mood = "neutral"
+                theme = "general"
+            else:
+                summary = response.strip()
+                tags = [request.content_type, "personal", "creative"]
+                mood = "neutral"
+                theme = "general"
+        
+        # Clean up summary
+        summary = summary.strip()
+        if not summary.endswith('.'):
+            summary += '.'
+        
+        return SummarizeResponse(
+            summary=summary,
+            tags=tags,
+            mood=mood,
+            theme=theme
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error analyzing content: {str(e)}")
