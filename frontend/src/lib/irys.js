@@ -2,7 +2,7 @@ import { WebUploader } from "@irys/web-upload";
 import { WebEthereum } from "@irys/web-upload-ethereum";
 import { EthersV6Adapter } from "@irys/web-upload-ethereum-ethers-v6";
 import { BrowserProvider } from "ethers";
-import { search } from "@irys/query";
+import Query from "@irys/query";
 
 let irys = null;
 
@@ -46,14 +46,16 @@ export async function uploadSnippet(data) {
 
 export async function listSnippets(wallet) {
   try {
-    const results = await search()
+    const myQuery = new Query();
+    
+    const results = await myQuery
+      .search("irys:transactions")
       .tags([
         { name: "application-id", values: ["IrysSnippetVault"] },
         { name: "user", values: [wallet] }
       ])
       .sort("DESC")
-      .limit(100)
-      .find();
+      .limit(100);
     
     const snippets = await Promise.all(results.map(async tx => {
       try {
