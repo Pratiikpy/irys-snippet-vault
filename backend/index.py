@@ -1,5 +1,8 @@
-from server import app
 from mangum import Mangum
+from server import app
 
-# Create the ASGI handler for Vercel
-handler = Mangum(app)
+# Create the Mangum handler for Vercel
+handler = Mangum(app, lifespan="off")
+
+# Export the app for direct access
+__all__ = ["handler", "app"]
