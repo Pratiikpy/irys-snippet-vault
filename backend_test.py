@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 
 class IrysSnippetVaultTester:
-    def __init__(self, base_url="https://3db6d965-b420-41ff-ae9d-7800ae231808.preview.emergentagent.com"):
+    def __init__(self, base_url="http://localhost:8001"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
