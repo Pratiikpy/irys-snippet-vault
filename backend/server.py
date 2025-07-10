@@ -219,6 +219,10 @@ async def get_user_snippets(wallet_address: str):
     """Get all snippets for a wallet address."""
     try:
         snippets = await db.snippet_metadata.find({"wallet_address": wallet_address}).to_list(1000)
+        # Convert ObjectId to string for JSON serialization
+        for snippet in snippets:
+            if "_id" in snippet:
+                snippet["_id"] = str(snippet["_id"])
         return {"snippets": snippets}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching snippets: {str(e)}")
