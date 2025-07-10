@@ -13,6 +13,9 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+import subprocess
+import json
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -54,6 +57,18 @@ class SummarizeResponse(BaseModel):
     summary: str
     tags: List[str]
 
+class IrysUploadRequest(BaseModel):
+    data: str
+    signature: str
+    address: str
+    tags: List[dict] = []
+
+class IrysUploadResponse(BaseModel):
+    id: str
+    gateway_url: str
+    timestamp: int
+    message: str
+
 class SnippetMetadata(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     wallet_address: str
@@ -73,6 +88,86 @@ class SnippetMetadataCreate(BaseModel):
     summary: str
     tags: List[str]
     network: str
+
+# Initialize Irys service
+async def init_irys_service():
+    """Initialize the Node.js Irys service"""
+    try:
+        result = subprocess.run(
+            ['node', 'irys_service.js'],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode == 0:
+            print("✅ Irys service initialized successfully")
+            return True
+        else:
+            print(f"❌ Irys service initialization failed: {result.stderr}")
+            return False
+    except Exception as e:
+        print(f"❌ Error initializing Irys service: {e}")
+        return False
+
+async def call_irys_service(action, data=None):
+    """Call the Node.js Irys service"""
+    try:
+        script = f"""
+const irysService = require('./irys_service.js');
+
+async function main() {{
+    await irysService.initialize();
+    
+    try {{
+        let result;
+        if ('{action}' === 'upload') {{
+            const data = {json.dumps(data.get('content', ''))};
+            const tags = {json.dumps(data.get('tags', []))};
+            result = await irysService.uploadData(data, tags);
+        }} else if ('{action}' === 'balance') {{
+            result = await irysService.getBalance();
+        }}
+        
+        console.log(JSON.stringify(result));
+    }} catch (error) {{
+        console.error('Error:', error.message);
+        process.exit(1);
+    }}
+}}
+
+main();
+"""
+        
+        # Write temporary script
+        script_path = ROOT_DIR / 'temp_irys_call.js'
+        with open(script_path, 'w') as f:
+            f.write(script)
+        
+        # Execute script
+        result = subprocess.run(
+            ['node', 'temp_irys_call.js'],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        
+        # Cleanup
+        if script_path.exists():
+            script_path.unlink()
+        
+        if result.returncode == 0:
+            # Parse the JSON output from the last line
+            output_lines = result.stdout.strip().split('\n')
+            json_output = output_lines[-1]
+            return json.loads(json_output)
+        else:
+            raise Exception(f"Irys service error: {result.stderr}")
+            
+    except Exception as e:
+        print(f"❌ Error calling Irys service: {e}")
+        raise HTTPException(status_code=500, detail=f"Irys service error: {str(e)}")
 
 # Utility functions
 def clean_text(text: str) -> str:
@@ -111,7 +206,7 @@ def extract_meaningful_content(soup):
 # Routes
 @api_router.get("/")
 async def root():
-    return {"message": "Irys Snippet Vault API"}
+    return {"message": "Irys Snippet Vault API - Real Blockchain Integration Active"}
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
@@ -204,9 +299,92 @@ async def summarize_snippet(request: SummarizeRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error summarizing content: {str(e)}")
 
+@api_router.post("/irys-upload", response_model=IrysUploadResponse)
+async def upload_to_irys_blockchain(request: IrysUploadRequest):
+    """Upload data to REAL Irys blockchain."""
+    try:
+        print(f"🔗 Uploading to Irys blockchain for wallet: {request.address}")
+        
+        # Prepare tags for blockchain storage
+        tags = [
+            {"name": "application-id", "value": "IrysSnippetVault"},
+            {"name": "user", "value": request.address},
+            {"name": "signature", "value": request.signature},
+            *request.tags
+        ]
+        
+        # Call Irys service to upload to blockchain
+        result = await call_irys_service('upload', {
+            'content': request.data,
+            'tags': tags
+        })
+        
+        print(f"✅ Successfully uploaded to Irys: {result['id']}")
+        
+        # Save metadata to our database for querying
+        metadata = {
+            "wallet_address": request.address,
+            "irys_id": result['id'],
+            "gateway_url": result['gateway_url'],
+            "timestamp": datetime.utcnow(),
+            "network": "irys-testnet",
+            "size": result.get('size', 0)
+        }
+        await db.irys_uploads.insert_one(metadata)
+        
+        return IrysUploadResponse(
+            id=result['id'],
+            gateway_url=result['gateway_url'],
+            timestamp=result.get('timestamp', int(datetime.utcnow().timestamp() * 1000)),
+            message="Successfully uploaded to Irys blockchain!"
+        )
+        
+    except Exception as e:
+        print(f"❌ Irys upload failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Blockchain upload failed: {str(e)}")
+
+@api_router.get("/irys-query/{wallet_address}")
+async def query_irys_snippets(wallet_address: str):
+    """Query snippets from Irys blockchain for a wallet."""
+    try:
+        print(f"🔍 Querying Irys blockchain for wallet: {wallet_address}")
+        
+        # Query our database for Irys uploads from this wallet
+        uploads = await db.irys_uploads.find({"wallet_address": wallet_address}).to_list(1000)
+        
+        snippets = []
+        for upload in uploads:
+            try:
+                # Fetch the actual data from Irys gateway
+                gateway_url = f"https://gateway.irys.xyz/{upload['irys_id']}"
+                response = requests.get(gateway_url, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    snippets.append({
+                        "id": upload['irys_id'],
+                        "irys_id": upload['irys_id'],
+                        "url": data.get('url', ''),
+                        "title": data.get('title', 'Untitled'),
+                        "summary": data.get('summary', ''),
+                        "tags": data.get('tags', []),
+                        "timestamp": upload['timestamp'],
+                        "gateway_url": gateway_url,
+                        "network": "irys"
+                    })
+            except Exception as e:
+                print(f"⚠️ Error fetching snippet {upload['irys_id']}: {e}")
+                continue
+        
+        print(f"✅ Found {len(snippets)} snippets for wallet {wallet_address}")
+        return {"snippets": snippets}
+        
+    except Exception as e:
+        print(f"❌ Query failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+
 @api_router.post("/save-snippet-metadata", response_model=SnippetMetadata)
 async def save_snippet_metadata(request: SnippetMetadataCreate):
-    """Save snippet metadata to database."""
+    """Save snippet metadata to database (backup/legacy)."""
     try:
         metadata = SnippetMetadata(**request.dict())
         await db.snippet_metadata.insert_one(metadata.dict())
@@ -216,7 +394,7 @@ async def save_snippet_metadata(request: SnippetMetadataCreate):
 
 @api_router.get("/snippets/{wallet_address}")
 async def get_user_snippets(wallet_address: str):
-    """Get all snippets for a wallet address."""
+    """Get all snippets for a wallet address (legacy/backup)."""
     try:
         snippets = await db.snippet_metadata.find({"wallet_address": wallet_address}).to_list(1000)
         # Convert ObjectId to string for JSON serialization
@@ -244,6 +422,18 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup."""
+    print("🚀 Starting Irys Snippet Vault API...")
+    
+    # Initialize Irys service
+    irys_ready = await init_irys_service()
+    if irys_ready:
+        print("✅ Irys blockchain integration ready!")
+    else:
+        print("⚠️ Irys service initialization failed - some features may not work")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
