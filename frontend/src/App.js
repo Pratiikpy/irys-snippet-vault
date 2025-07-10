@@ -590,7 +590,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
         summary: summarizedData.summary,
         tags: summarizedData.tags,
         timestamp: Date.now(),
-        network: "irys-testnet"
+        network: network
       };
       
       // Upload to REAL Irys blockchain via our backend
@@ -605,8 +605,32 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
         ]
       });
       
+      // Save metadata to database for social features
+      try {
+        await fetch(`${API}/save-snippet-metadata`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet_address: userAddress,
+            irys_id: receipt.id,
+            url: extractedData.url,
+            title: extractedData.title,
+            summary: summarizedData.summary,
+            tags: summarizedData.tags,
+            network: network,
+            is_public: true
+          })
+        });
+      } catch (metadataError) {
+        console.error('Error saving metadata:', metadataError);
+        // Don't fail the whole operation if metadata save fails
+      }
+      
       // Show success with REAL Irys gateway link
-      const gatewayUrl = `https://gateway.irys.xyz/${receipt.id}`;
+      const gatewayUrl = network === 'devnet' 
+        ? `https://devnet.irys.xyz/${receipt.id}`
+        : `https://gateway.irys.xyz/${receipt.id}`;
+      
       alert(`🎉 SUCCESS! Snippet saved to Irys blockchain!\n\nTransaction ID: ${receipt.id}\n\nView permanently stored data:\n${gatewayUrl}\n\nThis is now stored FOREVER on the blockchain!`);
       
       // Reset form
