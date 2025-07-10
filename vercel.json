@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "builds": [
     {
       "src": "frontend/package.json",
@@ -19,9 +20,14 @@
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/build/index.html"
+      "dest": "frontend/build/$1"
     }
   ],
+  "functions": {
+    "backend/server.py": {
+      "maxDuration": 30
+    }
+  },
   "env": {
     "CLAUDE_API_KEY": "@claude-api-key",
     "IRYS_PRIVATE_KEY": "@irys-private-key",
