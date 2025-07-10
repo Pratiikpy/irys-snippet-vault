@@ -698,11 +698,14 @@ async def get_public_feed(skip: int = 0, limit: int = 20):
                 irys_id=snippet["irys_id"],
                 wallet_address=snippet["wallet_address"],
                 username=user_profile.get("username") if user_profile else None,
-                url=snippet["url"],
+                url=snippet.get("url"),  # Optional for non-web content
                 title=snippet["title"],
                 summary=snippet["summary"],
                 tags=snippet["tags"],
                 network=snippet["network"],
+                content_type=snippet.get("content_type", "web_snippet"),
+                mood=snippet.get("mood"),
+                theme=snippet.get("theme"),
                 created_at=snippet["timestamp"],
                 likes_count=likes_count,
                 comments_count=comments_count
