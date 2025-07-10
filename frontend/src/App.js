@@ -31,6 +31,123 @@ const LoadingSpinner = ({ size = "md" }) => (
   </div>
 );
 
+// Comment System Component
+const CommentSystem = ({ snippetId, userAddress, isOpen, onClose }) => {
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && snippetId) {
+      fetchComments();
+    }
+  }, [isOpen, snippetId]);
+
+  const fetchComments = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API}/social/comments/${snippetId}`);
+      if (!response.ok) throw new Error('Failed to fetch comments');
+      const data = await response.json();
+      setComments(data.comments || []);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmitComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim() || !userAddress) return;
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`${API}/social/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_address: userAddress,
+          snippet_id: snippetId,
+          content: newComment.trim()
+        })
+      });
+
+      if (response.ok) {
+        setNewComment('');
+        fetchComments(); // Refresh comments
+      }
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="comment-modal-overlay" onClick={onClose}>
+      <div className="comment-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="comment-header">
+          <h3>💬 Comments</h3>
+          <button onClick={onClose} className="close-button">×</button>
+        </div>
+
+        <div className="comment-content">
+          {isLoading ? (
+            <div className="comment-loading">
+              <LoadingSpinner size="md" />
+              <p>Loading comments...</p>
+            </div>
+          ) : (
+            <div className="comments-list">
+              {comments.length === 0 ? (
+                <p className="no-comments">No comments yet. Be the first to comment!</p>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="comment-item">
+                    <div className="comment-author">
+                      <span className="comment-username">
+                        {comment.username || `${comment.user_address.slice(0, 6)}...${comment.user_address.slice(-4)}`}
+                      </span>
+                      <span className="comment-date">
+                        {new Date(comment.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="comment-text">{comment.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {userAddress && (
+            <form onSubmit={handleSubmitComment} className="comment-form">
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Write a comment..."
+                className="comment-input"
+                rows="3"
+                disabled={isSubmitting}
+              />
+              <NeonButton
+                type="submit"
+                disabled={!newComment.trim() || isSubmitting}
+                className="comment-submit"
+              >
+                {isSubmitting ? <LoadingSpinner size="sm" /> : 'Post Comment'}
+              </NeonButton>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Navigation Component
 const Navigation = ({ currentTab, onTabChange, userAddress }) => {
   const tabs = [
