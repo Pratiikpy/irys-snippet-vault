@@ -1,0 +1,61 @@
+from fastapi import FastAPI, APIRouter, HTTPException
+from dotenv import load_dotenv
+from starlette.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
+import logging
+from pathlib import Path
+from pydantic import BaseModel, Field
+from typing import List, Optional
+import uuid
+from datetime import datetime, timedelta
+import requests
+from bs4 import BeautifulSoup
+import re
+import subprocess
+import json
+import asyncio
+
+# Direct Claude API integration for Vercel compatibility
+async def call_claude_api(api_key: str, message: str, system_message: str = ""):
+    """Direct Claude API call without emergentintegrations dependency"""
+    try:
+        import requests
+        
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01"
+        }
+        
+        data = {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 1000,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": message
+                }
+            ]
+        }
+        
+        if system_message:
+            data["system"] = system_message
+        
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers=headers,
+            json=data,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result["content"][0]["text"]
+        else:
+            print(f"Claude API error: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"Error calling Claude API: {e}")
+        return None
