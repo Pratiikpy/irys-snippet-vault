@@ -126,6 +126,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
   const [url, setUrl] = useState('');
   const [extractedData, setExtractedData] = useState(null);
   const [summarizedData, setSummarizedData] = useState(null);
+  const [network, setNetwork] = useState('devnet'); // Add network state
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
