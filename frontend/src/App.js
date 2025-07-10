@@ -639,12 +639,18 @@ const WalletConnection = ({ onWalletConnected, connectedWallet, balance }) => {
   );
 };
 
-// Snippet Form Component - Now with REAL Irys blockchain storage
+// Enhanced Snippet Form Component with Content Types
 const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
+  const [contentType, setContentType] = useState('web_snippet');
   const [url, setUrl] = useState('');
+  const [textContent, setTextContent] = useState('');
+  const [textTitle, setTextTitle] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imageTitle, setImageTitle] = useState('');
+  const [imageDescription, setImageDescription] = useState('');
   const [extractedData, setExtractedData] = useState(null);
   const [summarizedData, setSummarizedData] = useState(null);
-  const [network, setNetwork] = useState('devnet'); // Add network state
+  const [network, setNetwork] = useState('devnet');
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -655,6 +661,28 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
       createIrysUploader(signer).then(setIrysUploader).catch(console.error);
     }
   }, [signer]);
+
+  const contentTypes = [
+    { id: 'web_snippet', label: 'Web Snippet', icon: '🔗', description: 'Extract content from any webpage' },
+    { id: 'text', label: 'Text/Poetry', icon: '📝', description: 'Write poems, thoughts, or stories' },
+    { id: 'image', label: 'Image', icon: '🖼️', description: 'Upload and describe images' }
+  ];
+
+  const resetForm = () => {
+    setUrl('');
+    setTextContent('');
+    setTextTitle('');
+    setImageFile(null);
+    setImageTitle('');
+    setImageDescription('');
+    setExtractedData(null);
+    setSummarizedData(null);
+  };
+
+  const handleContentTypeChange = (type) => {
+    setContentType(type);
+    resetForm();
+  };
 
   const extractSnippet = async () => {
     if (!url.trim()) return;
@@ -676,7 +704,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
       setExtractedData(data);
       
       // Auto-summarize after extraction
-      summarizeSnippet(data);
+      summarizeContent(data);
     } catch (error) {
       console.error('Error extracting snippet:', error);
       alert(`Error extracting snippet: ${error.message}`);
@@ -685,7 +713,104 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
     }
   };
 
-  const summarizeSnippet = async (data = extractedData) => {
+  const processTextContent = async () => {
+    if (!textContent.trim() || !textTitle.trim()) {
+      alert('Please enter both title and content');
+      return;
+    }
+    
+    try {
+      setIsSummarizing(true);
+      const response = await fetch(`${API}/process-text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: textTitle,
+          content: textContent,
+          content_type: contentType
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to process content');
+      }
+      
+      const data = await response.json();
+      setSummarizedData(data);
+      
+      // Set extracted data for consistency
+      setExtractedData({
+        title: textTitle,
+        snippet: textContent,
+        url: null
+      });
+    } catch (error) {
+      console.error('Error processing text:', error);
+      alert(`Error processing content: ${error.message}`);
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
+  const processImageContent = async () => {
+    if (!imageFile || !imageTitle.trim()) {
+      alert('Please select an image and enter a title');
+      return;
+    }
+    
+    try {
+      setIsSummarizing(true);
+      
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64Data = e.target.result;
+        
+        try {
+          const response = await fetch(`${API}/process-image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: imageTitle,
+              image_data: base64Data,
+              description: imageDescription,
+              content_type: 'image'
+            })
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to process image');
+          }
+          
+          const data = await response.json();
+          setSummarizedData(data);
+          
+          // Set extracted data for consistency
+          setExtractedData({
+            title: imageTitle,
+            snippet: imageDescription || 'Image content',
+            url: null,
+            imageData: base64Data
+          });
+        } catch (error) {
+          console.error('Error processing image:', error);
+          alert(`Error processing image: ${error.message}`);
+        } finally {
+          setIsSummarizing(false);
+        }
+      };
+      
+      reader.readAsDataURL(imageFile);
+    } catch (error) {
+      console.error('Error reading image:', error);
+      alert(`Error reading image: ${error.message}`);
+      setIsSummarizing(false);
+    }
+  };
+
+  const summarizeContent = async (data = extractedData) => {
     if (!data) return;
     
     try {
@@ -696,7 +821,8 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
         body: JSON.stringify({
           snippet: data.snippet,
           url: data.url,
-          title: data.title
+          title: data.title,
+          content_type: 'web_snippet'
         })
       });
       
@@ -721,15 +847,18 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
     try {
       setIsSaving(true);
       
-      // Prepare snippet data for REAL Irys blockchain storage
+      // Prepare content data for Irys blockchain storage
       const blockchainData = {
         applicationId: "IrysSnippetVault",
         user: userAddress,
+        contentType: contentType,
         url: extractedData.url,
         title: extractedData.title,
-        snippet: extractedData.snippet,
+        content: contentType === 'image' ? extractedData.imageData : extractedData.snippet,
         summary: summarizedData.summary,
         tags: summarizedData.tags,
+        mood: summarizedData.mood,
+        theme: summarizedData.theme,
         timestamp: Date.now(),
         network: network
       };
@@ -739,7 +868,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
         tags: [
           { name: "application-id", value: "IrysSnippetVault" },
           { name: "user", value: userAddress },
-          { name: "url", value: extractedData.url },
+          { name: "content-type", value: contentType },
           { name: "title", value: extractedData.title },
           { name: "Content-Type", value: "application/json" },
           ...summarizedData.tags.map(tag => ({ name: "tag", value: tag }))
@@ -759,27 +888,24 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
             summary: summarizedData.summary,
             tags: summarizedData.tags,
             network: network,
+            content_type: contentType,
+            mood: summarizedData.mood,
+            theme: summarizedData.theme,
             is_public: true
           })
         });
       } catch (metadataError) {
         console.error('Error saving metadata:', metadataError);
-        // Don't fail the whole operation if metadata save fails
       }
       
-      // Show success with REAL Irys gateway link
       const gatewayUrl = network === 'devnet' 
         ? `https://devnet.irys.xyz/${receipt.id}`
         : `https://gateway.irys.xyz/${receipt.id}`;
       
-      alert(`🎉 SUCCESS! Snippet saved to Irys blockchain!\n\nTransaction ID: ${receipt.id}\n\nView permanently stored data:\n${gatewayUrl}\n\nThis is now stored FOREVER on the blockchain!`);
+      const contentTypeLabel = contentTypes.find(ct => ct.id === contentType)?.label || contentType;
+      alert(`🎉 SUCCESS! ${contentTypeLabel} saved to Irys blockchain!\n\nTransaction ID: ${receipt.id}\n\nView permanently stored data:\n${gatewayUrl}\n\nThis is now stored FOREVER on the blockchain!`);
       
-      // Reset form
-      setUrl('');
-      setExtractedData(null);
-      setSummarizedData(null);
-      
-      // Trigger refresh of snippets list
+      resetForm();
       if (onSnippetSaved) onSnippetSaved();
       
     } catch (error) {
@@ -790,35 +916,148 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
     }
   };
 
+  const renderContentTypeSelector = () => (
+    <div className="content-type-selector">
+      <h3>Choose Content Type</h3>
+      <div className="content-type-tabs">
+        {contentTypes.map((type) => (
+          <button
+            key={type.id}
+            onClick={() => handleContentTypeChange(type.id)}
+            className={`content-type-tab ${contentType === type.id ? 'active' : ''}`}
+          >
+            <span className="tab-icon">{type.icon}</span>
+            <div className="tab-content">
+              <span className="tab-label">{type.label}</span>
+              <span className="tab-description">{type.description}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderContentInput = () => {
+    switch (contentType) {
+      case 'web_snippet':
+        return (
+          <div className="form-group">
+            <label htmlFor="url">Website URL</label>
+            <input
+              id="url"
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/article"
+              className="url-input"
+            />
+            <NeonButton 
+              onClick={extractSnippet} 
+              disabled={!url.trim() || isExtracting}
+              className="extract-button"
+            >
+              {isExtracting ? <LoadingSpinner size="sm" /> : "Extract Snippet"}
+            </NeonButton>
+          </div>
+        );
+      
+      case 'text':
+      case 'poetry':
+        return (
+          <div className="form-group">
+            <label htmlFor="textTitle">Title</label>
+            <input
+              id="textTitle"
+              type="text"
+              value={textTitle}
+              onChange={(e) => setTextTitle(e.target.value)}
+              placeholder="Enter title for your content"
+              className="text-input"
+            />
+            <label htmlFor="textContent">Content</label>
+            <textarea
+              id="textContent"
+              value={textContent}
+              onChange={(e) => setTextContent(e.target.value)}
+              placeholder="Write your poetry, thoughts, or any text content..."
+              className="text-content-input"
+              rows="8"
+            />
+            <NeonButton 
+              onClick={processTextContent} 
+              disabled={!textContent.trim() || !textTitle.trim() || isSummarizing}
+              className="process-button"
+            >
+              {isSummarizing ? <LoadingSpinner size="sm" /> : "Analyze Content"}
+            </NeonButton>
+          </div>
+        );
+      
+      case 'image':
+        return (
+          <div className="form-group">
+            <label htmlFor="imageTitle">Image Title</label>
+            <input
+              id="imageTitle"
+              type="text"
+              value={imageTitle}
+              onChange={(e) => setImageTitle(e.target.value)}
+              placeholder="Enter title for your image"
+              className="text-input"
+            />
+            <label htmlFor="imageFile">Upload Image</label>
+            <input
+              id="imageFile"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files[0])}
+              className="file-input"
+            />
+            <label htmlFor="imageDescription">Description (Optional)</label>
+            <textarea
+              id="imageDescription"
+              value={imageDescription}
+              onChange={(e) => setImageDescription(e.target.value)}
+              placeholder="Describe your image..."
+              className="text-content-input"
+              rows="3"
+            />
+            <NeonButton 
+              onClick={processImageContent} 
+              disabled={!imageFile || !imageTitle.trim() || isSummarizing}
+              className="process-button"
+            >
+              {isSummarizing ? <LoadingSpinner size="sm" /> : "Process Image"}
+            </NeonButton>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
   return (
     <GlassCard className="snippet-form">
-      <h2 className="form-title">🔗 Save Web Snippets to Irys Blockchain</h2>
+      <h2 className="form-title">✨ Create Content for Irys Blockchain</h2>
       
-      <div className="form-group">
-        <label htmlFor="url">Website URL</label>
-        <input
-          id="url"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://example.com/article"
-          className="url-input"
-        />
-        <NeonButton 
-          onClick={extractSnippet} 
-          disabled={!url.trim() || isExtracting}
-          className="extract-button"
-        >
-          {isExtracting ? <LoadingSpinner size="sm" /> : "Extract Snippet"}
-        </NeonButton>
-      </div>
+      {renderContentTypeSelector()}
+      
+      {renderContentInput()}
 
       {extractedData && (
         <div className="extracted-content">
-          <h3>📄 Extracted Content</h3>
+          <h3>📄 {contentType === 'image' ? 'Image' : 'Content'} Preview</h3>
           <div className="content-preview">
             <h4>{extractedData.title}</h4>
-            <p className="snippet-text">{extractedData.snippet}</p>
+            {extractedData.imageData ? (
+              <div className="image-preview">
+                <img src={extractedData.imageData} alt={extractedData.title} className="preview-image" />
+                <p className="snippet-text">{extractedData.snippet}</p>
+              </div>
+            ) : (
+              <p className="snippet-text">{extractedData.snippet}</p>
+            )}
           </div>
         </div>
       )}
@@ -826,7 +1065,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
       {isSummarizing && (
         <div className="summarizing">
           <LoadingSpinner size="md" />
-          <p>AI is analyzing your snippet...</p>
+          <p>AI is analyzing your {contentTypes.find(ct => ct.id === contentType)?.label.toLowerCase()}...</p>
         </div>
       )}
 
@@ -845,6 +1084,18 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
               ))}
             </div>
           </div>
+          {summarizedData.mood && (
+            <div className="mood-section">
+              <h4>Mood</h4>
+              <span className="mood-badge">{summarizedData.mood}</span>
+            </div>
+          )}
+          {summarizedData.theme && (
+            <div className="theme-section">
+              <h4>Theme</h4>
+              <span className="theme-badge">{summarizedData.theme}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -854,10 +1105,10 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
             <h3>⛓️ Ready for Irys Blockchain Storage</h3>
             <div className="network-info">
               <p className="info-text">
-                <strong>Network:</strong> Irys Devnet (Free Testing)<br/>
+                <strong>Content Type:</strong> {contentTypes.find(ct => ct.id === contentType)?.label}<br/>
+                <strong>Network:</strong> Irys {network === 'devnet' ? 'Devnet (Free Testing)' : 'Mainnet (Production)'}<br/>
                 <strong>Storage:</strong> Permanent & Immutable<br/>
-                <strong>Gateway:</strong> devnet.irys.xyz<br/>
-                <strong>Cost:</strong> <span className="free-badge">FREE</span> on testnet
+                <strong>Cost:</strong> <span className="free-badge">{network === 'devnet' ? 'FREE' : 'Small ETH fee'}</span>
               </p>
             </div>
           </div>
@@ -901,33 +1152,6 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
           >
             {isSaving ? <LoadingSpinner size="sm" /> : `💾 Save to Irys ${network === 'devnet' ? 'Devnet' : 'Mainnet'} (${network === 'devnet' ? 'FREE' : 'Paid'})`}
           </NeonButton>
-          
-          <div className="blockchain-details">
-            <h4>📋 What happens when you save:</h4>
-            <ul className="save-details-list">
-              <li>🔐 <strong>Sign message:</strong> MetaMask will ask for signature</li>
-              <li>⛓️ <strong>Blockchain upload:</strong> Data stored permanently on Irys</li>
-              <li>🌐 <strong>Gateway access:</strong> Viewable at {network === 'devnet' ? 'devnet.irys.xyz' : 'gateway.irys.xyz'}</li>
-              <li>💰 <strong>Cost:</strong> {network === 'devnet' ? 'FREE (testnet)' : 'Small ETH fee (mainnet)'}</li>
-              <li>🔒 <strong>Permanent:</strong> Cannot be deleted or modified once saved</li>
-            </ul>
-          </div>
-          
-          {network === 'devnet' && (
-            <div className="devnet-info">
-              <p className="success-text">
-                ✅ <strong>Devnet is FREE!</strong> Perfect for testing. Your data will still be permanently stored and accessible forever.
-              </p>
-            </div>
-          )}
-          
-          {network === 'mainnet' && (
-            <div className="warning-section">
-              <p className="warning-text">
-                ⚠️ <strong>MAINNET COSTS REAL ETH:</strong> Small fee required for permanent storage
-              </p>
-            </div>
-          )}
         </div>
       )}
     </GlassCard>
