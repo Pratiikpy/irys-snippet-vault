@@ -525,25 +525,25 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Links and clickable elements with custom cursor */
+/* Links and clickable elements with standard cursor */
 .original-link, .irys-link {
   color: #00ffff;
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
   transition: color 0.3s ease;
-  cursor: url('/cursor-cat-pointer.png') 16 16, pointer;
+  cursor: pointer;
 }
 
 .original-link:hover, .irys-link:hover {
   color: #8a2be2;
-  cursor: url('/cursor-cat-pointer.png') 16 16, pointer;
+  cursor: pointer;
 }
 
 .irys-link {
   background: none;
   border: none;
-  cursor: url('/cursor-cat-pointer.png') 16 16, pointer;
+  cursor: pointer;
   font-family: inherit;
 }
 
