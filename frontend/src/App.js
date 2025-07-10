@@ -869,6 +869,7 @@ function App() {
   const [userAddress, setUserAddress] = useState(null);
   const [balance, setBalance] = useState(null);
   const [refreshSnippets, setRefreshSnippets] = useState(0);
+  const [currentTab, setCurrentTab] = useState('home');
 
   const handleWalletConnected = async (connectedSigner, address) => {
     setSigner(connectedSigner);
@@ -888,6 +889,91 @@ function App() {
     setRefreshSnippets(prev => prev + 1);
   };
 
+  const renderCurrentTab = () => {
+    if (!signer) {
+      return (
+        <div className="welcome-screen">
+          <GlassCard className="welcome-card">
+            <h2>Welcome to Irys Snippet Vault</h2>
+            <p>Connect your wallet to start saving web snippets permanently on Irys blockchain.</p>
+            <ul className="features-list">
+              <li>🔗 Extract content from any webpage</li>
+              <li>🤖 AI-powered summarization and tagging</li>
+              <li>⛓️ <strong>REAL</strong> permanent storage on Irys blockchain</li>
+              <li>🎨 Beautiful Notion-style interface</li>
+              <li>👥 Social features - follow users, like snippets, comment</li>
+              <li>🌐 Public feed to discover trending content</li>
+            </ul>
+            <div className="demo-section">
+              <h3>🔥 Real Irys Blockchain Storage</h3>
+              <p>Your snippets will be <strong>permanently stored</strong> on Irys blockchain forever!</p>
+              <div className="network-comparison">
+                <div className="network-card devnet">
+                  <h4>🆓 Devnet (Recommended)</h4>
+                  <ul>
+                    <li>✅ <strong>FREE</strong> to use</li>
+                    <li>✅ Same permanence as mainnet</li>
+                    <li>✅ Perfect for testing</li>
+                    <li>🌐 Access: devnet.irys.xyz</li>
+                  </ul>
+                </div>
+                <div className="network-card mainnet">
+                  <h4>💰 Mainnet (Production)</h4>
+                  <ul>
+                    <li>💸 Small ETH fees</li>
+                    <li>✅ Production network</li>
+                    <li>✅ Same features</li>
+                    <li>🌐 Access: gateway.irys.xyz</li>
+                  </ul>
+                </div>
+              </div>
+              <p className="small-text">
+                💡 <strong>Both networks store data permanently!</strong> Devnet is free and perfect for trying the app.
+              </p>
+            </div>
+          </GlassCard>
+        </div>
+      );
+    }
+
+    switch (currentTab) {
+      case 'home':
+        return (
+          <div className="tab-content">
+            <SnippetForm 
+              signer={signer}
+              userAddress={userAddress}
+              onSnippetSaved={handleSnippetSaved}
+            />
+            <SnippetList 
+              userAddress={userAddress}
+              refreshTrigger={refreshSnippets}
+            />
+          </div>
+        );
+      case 'feed':
+        return (
+          <div className="tab-content">
+            <PublicFeed userAddress={userAddress} />
+          </div>
+        );
+      case 'profile':
+        return (
+          <div className="tab-content">
+            <UserProfile userAddress={userAddress} signer={signer} />
+          </div>
+        );
+      case 'discover':
+        return (
+          <div className="tab-content">
+            <UserDiscovery userAddress={userAddress} />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="App">
       <div className="app-background">
@@ -902,7 +988,9 @@ function App() {
             <span className="title-icon">🔗</span>
             Irys Snippet Vault
           </h1>
-          <p className="app-subtitle">Permanently store web snippets on Irys blockchain with AI analysis</p>
+          <p className="app-subtitle">
+            Permanently store web snippets on Irys blockchain with AI analysis and social features
+          </p>
           <WalletConnection 
             onWalletConnected={handleWalletConnected}
             connectedWallet={userAddress}
@@ -911,60 +999,16 @@ function App() {
         </div>
       </header>
 
+      {signer && (
+        <Navigation 
+          currentTab={currentTab} 
+          onTabChange={setCurrentTab}
+          userAddress={userAddress}
+        />
+      )}
+
       <main className="app-main">
-        {signer ? (
-          <div className="app-content">
-            <SnippetForm 
-              signer={signer}
-              userAddress={userAddress}
-              onSnippetSaved={handleSnippetSaved}
-            />
-            <SnippetList 
-              userAddress={userAddress}
-              refreshTrigger={refreshSnippets}
-            />
-          </div>
-        ) : (
-          <div className="welcome-screen">
-            <GlassCard className="welcome-card">
-              <h2>Welcome to Irys Snippet Vault</h2>
-              <p>Connect your wallet to start saving web snippets permanently on Irys blockchain.</p>
-              <ul className="features-list">
-                <li>🔗 Extract content from any webpage</li>
-                <li>🤖 AI-powered summarization and tagging</li>
-                <li>⛓️ <strong>REAL</strong> permanent storage on Irys blockchain</li>
-                <li>🎨 Beautiful Notion-style interface</li>
-              </ul>
-              <div className="demo-section">
-                <h3>🔥 Real Irys Blockchain Storage</h3>
-                <p>Your snippets will be <strong>permanently stored</strong> on Irys blockchain forever!</p>
-                <div className="network-comparison">
-                  <div className="network-card devnet">
-                    <h4>🆓 Devnet (Recommended)</h4>
-                    <ul>
-                      <li>✅ <strong>FREE</strong> to use</li>
-                      <li>✅ Same permanence as mainnet</li>
-                      <li>✅ Perfect for testing</li>
-                      <li>🌐 Access: devnet.irys.xyz</li>
-                    </ul>
-                  </div>
-                  <div className="network-card mainnet">
-                    <h4>💰 Mainnet (Production)</h4>
-                    <ul>
-                      <li>💸 Small ETH fees</li>
-                      <li>✅ Production network</li>
-                      <li>✅ Same features</li>
-                      <li>🌐 Access: gateway.irys.xyz</li>
-                    </ul>
-                  </div>
-                </div>
-                <p className="small-text">
-                  💡 <strong>Both networks store data permanently!</strong> Devnet is free and perfect for trying the app.
-                </p>
-              </div>
-            </GlassCard>
-          </div>
-        )}
+        {renderCurrentTab()}
       </main>
     </div>
   );
