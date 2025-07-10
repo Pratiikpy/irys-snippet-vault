@@ -367,6 +367,7 @@ body {
   gap: 0.5rem;
 }
 
+/* Tags with custom cursor */
 .tag {
   background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(138, 43, 226, 0.2));
   border: 1px solid rgba(0, 255, 255, 0.3);
@@ -375,6 +376,14 @@ body {
   font-size: 0.85rem;
   font-weight: 500;
   color: #00ffff;
+  cursor: url('/cursor-cat.png') 16 16, auto;
+  transition: all 0.3s ease;
+}
+
+.tag:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 255, 255, 0.3);
+  cursor: url('/cursor-cat-pointer.png') 16 16, pointer;
 }
 
 /* Save Section */
