@@ -403,18 +403,10 @@ async def process_text_content(request: TextContentRequest):
             system_message = "You are a text analysis expert. For each text provided, respond with: one sentence summary, 3 topical tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
             user_prompt = f"Please analyze this text titled '{request.title}'. Content: {request.content}"
         
-        # Create Claude chat instance
-        chat = LlmChat(
-            api_key=claude_api_key,
-            session_id=f"analyze-{request.content_type}-{uuid.uuid4()}",
-            system_message=system_message
-        ).with_model("anthropic", "claude-3-5-sonnet-20241022")
-        
-        # Create user message
-        user_message = UserMessage(text=user_prompt)
-        
         # Get response from Claude
-        response = await chat.send_message(user_message)
+        response = await call_claude_api(claude_api_key, user_prompt, system_message)
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to get response from Claude API")
         
         # Parse response
         parts = response.split('|')
