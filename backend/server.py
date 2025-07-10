@@ -972,6 +972,21 @@ async def get_user_snippets(wallet_address: str):
 # Include the router in the main app
 app.include_router(api_router)
 
+# Health check endpoint for Vercel testing
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint for Vercel deployment testing"""
+    return {
+        "status": "healthy",
+        "message": "Irys Snippet Vault API is running",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.get("/api/test")
+async def test_endpoint():
+    """Test endpoint for Vercel deployment verification"""
+    return {"message": "API is working correctly", "version": "1.0.0"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
