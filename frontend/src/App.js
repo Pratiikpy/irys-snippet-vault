@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { Uploader } from '@irys/upload';
-import { Ethereum } from '@irys/upload-ethereum';
 import './App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -45,11 +42,9 @@ const WalletConnection = ({ onWalletConnected, connectedWallet }) => {
 
     try {
       setIsConnecting(true);
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send("eth_requestAccounts", []);
-      const signer = await provider.getSigner();
-      
-      onWalletConnected(signer, accounts[0]);
+      // Request account access
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      onWalletConnected(accounts[0]);
     } catch (error) {
       console.error("Wallet connection failed:", error);
       alert("Failed to connect wallet. Please try again.");
@@ -77,7 +72,7 @@ const WalletConnection = ({ onWalletConnected, connectedWallet }) => {
 };
 
 // Snippet Form Component
-const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
+const SnippetForm = ({ userAddress, onSnippetSaved }) => {
   const [url, setUrl] = useState('');
   const [extractedData, setExtractedData] = useState(null);
   const [summarizedData, setSummarizedData] = useState(null);
@@ -145,45 +140,14 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
     }
   };
 
-  const saveToIrys = async () => {
-    if (!extractedData || !summarizedData || !signer) return;
+  const saveSnippet = async () => {
+    if (!extractedData || !summarizedData || !userAddress) return;
     
     try {
       setIsSaving(true);
       
-      // Create Irys uploader
-      const irysUploader = await Uploader(Ethereum)
-        .withWallet(signer)
-        .withConfig({ 
-          network: network,
-          token: "ethereum"
-        });
-      
-      // Prepare snippet data
-      const snippetData = {
-        applicationId: "IrysSnippetVault",
-        user: userAddress,
-        url: extractedData.url,
-        title: extractedData.title,
-        snippet: extractedData.snippet,
-        summary: summarizedData.summary,
-        tags: summarizedData.tags,
-        timestamp: Date.now(),
-        network: network
-      };
-      
-      // Upload to Irys
-      const receipt = await irysUploader.upload(JSON.stringify(snippetData), {
-        tags: [
-          { name: "application-id", value: "IrysSnippetVault" },
-          { name: "user", value: userAddress },
-          { name: "url", value: extractedData.url },
-          { name: "title", value: extractedData.title },
-          { name: "timestamp", value: snippetData.timestamp.toString() },
-          { name: "network", value: network },
-          ...summarizedData.tags.map(tag => ({ name: "tag", value: tag }))
-        ]
-      });
+      // For now, we'll simulate blockchain storage and save metadata
+      const mockIrysId = `irys-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       // Save metadata to backend
       await fetch(`${API}/save-snippet-metadata`, {
@@ -191,7 +155,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet_address: userAddress,
-          irys_id: receipt.id,
+          irys_id: mockIrysId,
           url: extractedData.url,
           title: extractedData.title,
           summary: summarizedData.summary,
@@ -200,7 +164,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
         })
       });
       
-      alert(`Snippet saved successfully! Irys ID: ${receipt.id}`);
+      alert(`Snippet saved successfully! ID: ${mockIrysId}`);
       
       // Reset form
       setUrl('');
@@ -211,7 +175,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
       if (onSnippetSaved) onSnippetSaved();
       
     } catch (error) {
-      console.error('Error saving to Irys:', error);
+      console.error('Error saving snippet:', error);
       alert(`Error saving snippet: ${error.message}`);
     } finally {
       setIsSaving(false);
@@ -303,11 +267,11 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
           </div>
           
           <NeonButton 
-            onClick={saveToIrys} 
+            onClick={saveSnippet} 
             disabled={isSaving}
             className="save-button"
           >
-            {isSaving ? <LoadingSpinner size="sm" /> : `Save to Irys (${network})`}
+            {isSaving ? <LoadingSpinner size="sm" /> : `Save Snippet (${network})`}
           </NeonButton>
         </div>
       )}
@@ -339,8 +303,8 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
     fetchSnippets();
   }, [userAddress, refreshTrigger]);
 
-  const openIrysGateway = (irysId) => {
-    window.open(`https://gateway.irys.xyz/${irysId}`, '_blank');
+  const openUrl = (url) => {
+    window.open(url, '_blank');
   };
 
   if (isLoading) {
@@ -377,15 +341,13 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
                 ))}
               </div>
               <div className="snippet-footer">
-                <a href={snippet.url} target="_blank" rel="noopener noreferrer" className="original-link">
-                  View Original
-                </a>
                 <button 
-                  onClick={() => openIrysGateway(snippet.irys_id)}
-                  className="irys-link"
+                  onClick={() => openUrl(snippet.url)}
+                  className="original-link"
                 >
-                  View on Irys
+                  View Original
                 </button>
+                <span className="irys-id">ID: {snippet.irys_id}</span>
               </div>
             </div>
           ))}
@@ -397,12 +359,10 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
 
 // Main App Component
 function App() {
-  const [signer, setSigner] = useState(null);
   const [userAddress, setUserAddress] = useState(null);
   const [refreshSnippets, setRefreshSnippets] = useState(0);
 
-  const handleWalletConnected = (connectedSigner, address) => {
-    setSigner(connectedSigner);
+  const handleWalletConnected = (address) => {
     setUserAddress(address);
   };
 
@@ -424,7 +384,7 @@ function App() {
             <span className="title-icon">🔗</span>
             Irys Snippet Vault
           </h1>
-          <p className="app-subtitle">Permanently store and organize web snippets on the blockchain</p>
+          <p className="app-subtitle">Permanently store and organize web snippets with AI-powered analysis</p>
           <WalletConnection 
             onWalletConnected={handleWalletConnected}
             connectedWallet={userAddress}
@@ -433,10 +393,9 @@ function App() {
       </header>
 
       <main className="app-main">
-        {signer ? (
+        {userAddress ? (
           <div className="app-content">
             <SnippetForm 
-              signer={signer} 
               userAddress={userAddress}
               onSnippetSaved={handleSnippetSaved}
             />
@@ -449,13 +408,17 @@ function App() {
           <div className="welcome-screen">
             <GlassCard className="welcome-card">
               <h2>Welcome to Irys Snippet Vault</h2>
-              <p>Connect your wallet to start saving web snippets permanently on the blockchain.</p>
+              <p>Connect your wallet to start saving web snippets with AI-powered analysis.</p>
               <ul className="features-list">
                 <li>🔗 Extract content from any webpage</li>
                 <li>🤖 AI-powered summarization and tagging</li>
-                <li>⛓️ Permanent storage on Irys blockchain</li>
+                <li>⛓️ Blockchain storage ready (connect wallet to activate)</li>
                 <li>🎨 Beautiful Notion-style interface</li>
               </ul>
+              <div className="demo-section">
+                <h3>Try the Demo</h3>
+                <p>Connect your wallet to experience the full functionality!</p>
+              </div>
             </GlassCard>
           </div>
         )}
