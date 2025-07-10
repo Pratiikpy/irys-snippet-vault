@@ -278,6 +278,27 @@ main();
             }
         raise HTTPException(status_code=500, detail=f"Irys service error: {str(e)}")
 
+async def call_claude_api(api_key: str, user_prompt: str, system_message: str) -> str:
+    """Call Claude API with the given prompt and system message."""
+    try:
+        # Create Claude chat instance
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"text-{uuid.uuid4()}",
+            system_message=system_message
+        ).with_model("anthropic", "claude-3-5-sonnet-20241022")
+        
+        # Create user message
+        user_message = UserMessage(text=user_prompt)
+        
+        # Get response from Claude
+        response = await chat.send_message(user_message)
+        return response
+        
+    except Exception as e:
+        print(f"Error calling Claude API: {e}")
+        return None
+
 # Utility functions
 def clean_text(text: str) -> str:
     """Clean extracted text by removing extra whitespace and special characters."""
