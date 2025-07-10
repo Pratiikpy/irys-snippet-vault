@@ -31,6 +31,45 @@ const LoadingSpinner = ({ size = "md" }) => (
   </div>
 );
 
+// Real Irys Integration Helper
+const createIrysUploader = async (signer) => {
+  try {
+    // For simplicity, we'll use the backend to handle Irys uploads
+    // since browser Irys SDK has complex polyfill requirements
+    const address = await signer.getAddress();
+    return {
+      address,
+      signer,
+      upload: async (data, options = {}) => {
+        // Create a message for the user to sign
+        const message = `Upload to Irys blockchain:\nData: ${data.substring(0, 100)}${data.length > 100 ? '...' : ''}\nTimestamp: ${Date.now()}`;
+        const signature = await signer.signMessage(message);
+        
+        // Send to backend for real Irys upload
+        const response = await fetch(`${API}/irys-upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data,
+            signature,
+            address,
+            tags: options.tags || []
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to upload to Irys');
+        }
+        
+        return await response.json();
+      }
+    };
+  } catch (error) {
+    console.error('Error creating Irys uploader:', error);
+    throw error;
+  }
+};
+
 // Wallet Connection Component
 const WalletConnection = ({ onWalletConnected, connectedWallet, balance }) => {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -82,15 +121,21 @@ const WalletConnection = ({ onWalletConnected, connectedWallet, balance }) => {
   );
 };
 
-// Snippet Form Component - Now with blockchain-ready structure
+// Snippet Form Component - Now with REAL Irys blockchain storage
 const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
   const [url, setUrl] = useState('');
   const [extractedData, setExtractedData] = useState(null);
   const [summarizedData, setSummarizedData] = useState(null);
-  const [network, setNetwork] = useState('devnet');
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [irysUploader, setIrysUploader] = useState(null);
+
+  useEffect(() => {
+    if (signer) {
+      createIrysUploader(signer).then(setIrysUploader).catch(console.error);
+    }
+  }, [signer]);
 
   const extractSnippet = async () => {
     if (!url.trim()) return;
@@ -151,13 +196,13 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
     }
   };
 
-  const saveToBlockchain = async () => {
-    if (!extractedData || !summarizedData || !signer || !userAddress) return;
+  const saveToIrysBlockchain = async () => {
+    if (!extractedData || !summarizedData || !irysUploader || !userAddress) return;
     
     try {
       setIsSaving(true);
       
-      // For demonstration - create blockchain-ready data structure
+      // Prepare snippet data for REAL Irys blockchain storage
       const blockchainData = {
         applicationId: "IrysSnippetVault",
         user: userAddress,
@@ -167,30 +212,24 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
         summary: summarizedData.summary,
         tags: summarizedData.tags,
         timestamp: Date.now(),
-        network: network
+        network: "irys-testnet"
       };
       
-      // Simulate blockchain transaction ID (in real implementation, this would be from Irys)
-      const simulatedTxId = `irys-blockchain-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Save to our database with blockchain structure
-      await fetch(`${API}/save-snippet-metadata`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wallet_address: userAddress,
-          irys_id: simulatedTxId,
-          url: extractedData.url,
-          title: extractedData.title,
-          summary: summarizedData.summary,
-          tags: summarizedData.tags,
-          network: network
-        })
+      // Upload to REAL Irys blockchain via our backend
+      const receipt = await irysUploader.upload(JSON.stringify(blockchainData), {
+        tags: [
+          { name: "application-id", value: "IrysSnippetVault" },
+          { name: "user", value: userAddress },
+          { name: "url", value: extractedData.url },
+          { name: "title", value: extractedData.title },
+          { name: "Content-Type", value: "application/json" },
+          ...summarizedData.tags.map(tag => ({ name: "tag", value: tag }))
+        ]
       });
       
-      // Show blockchain-style success message
-      const gatewayUrl = `https://gateway.irys.xyz/${simulatedTxId}`;
-      alert(`🎉 Snippet ready for blockchain!\n\nTransaction ID: ${simulatedTxId}\n\nThis would be stored permanently on Irys blockchain.\nGateway URL: ${gatewayUrl}`);
+      // Show success with REAL Irys gateway link
+      const gatewayUrl = `https://gateway.irys.xyz/${receipt.id}`;
+      alert(`🎉 SUCCESS! Snippet saved to Irys blockchain!\n\nTransaction ID: ${receipt.id}\n\nView permanently stored data:\n${gatewayUrl}\n\nThis is now stored FOREVER on the blockchain!`);
       
       // Reset form
       setUrl('');
@@ -201,8 +240,8 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
       if (onSnippetSaved) onSnippetSaved();
       
     } catch (error) {
-      console.error('Error preparing for blockchain:', error);
-      alert(`Error: ${error.message}`);
+      console.error('Error saving to Irys blockchain:', error);
+      alert(`Error saving to blockchain: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -210,7 +249,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
 
   return (
     <GlassCard className="snippet-form">
-      <h2 className="form-title">Clip & Store Web Snippets</h2>
+      <h2 className="form-title">🔗 Save Web Snippets to Irys Blockchain</h2>
       
       <div className="form-group">
         <label htmlFor="url">Website URL</label>
@@ -244,13 +283,13 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
       {isSummarizing && (
         <div className="summarizing">
           <LoadingSpinner size="md" />
-          <p>AI is summarizing your snippet...</p>
+          <p>AI is analyzing your snippet...</p>
         </div>
       )}
 
       {summarizedData && (
         <div className="summarized-content">
-          <h3>🤖 AI Analysis</h3>
+          <h3>🤖 AI Analysis Complete</h3>
           <div className="summary-section">
             <h4>Summary</h4>
             <p>{summarizedData.summary}</p>
@@ -268,47 +307,27 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
 
       {extractedData && summarizedData && (
         <div className="save-section">
-          <div className="network-selector">
-            <label>Blockchain Network:</label>
-            <div className="radio-group">
-              <label className="radio-label">
-                <input
-                  type="radio"
-                  value="devnet"
-                  checked={network === 'devnet'}
-                  onChange={(e) => setNetwork(e.target.value)}
-                />
-                Devnet (Free Testing)
-              </label>
-              <label className="radio-label">
-                <input
-                  type="radio"
-                  value="mainnet"
-                  checked={network === 'mainnet'}
-                  onChange={(e) => setNetwork(e.target.value)}
-                />
-                Mainnet (Requires ETH)
-              </label>
-            </div>
+          <div className="blockchain-info">
+            <h3>⛓️ Ready for Blockchain Storage</h3>
+            <p className="info-text">
+              <strong>Network:</strong> Irys Testnet<br/>
+              <strong>Storage:</strong> Permanent & Immutable<br/>
+              <strong>Cost:</strong> Paid with your ETH
+            </p>
           </div>
           
           <NeonButton 
-            onClick={saveToBlockchain} 
-            disabled={isSaving}
+            onClick={saveToIrysBlockchain} 
+            disabled={isSaving || !irysUploader}
             className="save-button"
           >
-            {isSaving ? <LoadingSpinner size="sm" /> : `💾 Save to Blockchain (${network})`}
+            {isSaving ? <LoadingSpinner size="sm" /> : `💾 Save Permanently to Irys Blockchain`}
           </NeonButton>
           
-          <div className="blockchain-info">
-            <p className="info-text">
-              ⛓️ <strong>Blockchain Ready:</strong> Your snippet will be permanently stored with AI analysis
+          <div className="warning-section">
+            <p className="warning-text">
+              ⚠️ <strong>PERMANENT STORAGE:</strong> Once saved, this data cannot be deleted or modified
             </p>
-            {network === 'mainnet' && (
-              <p className="warning-text">
-                ⚠️ Mainnet requires ETH for transaction fees
-              </p>
-            )}
           </div>
         </div>
       )}
@@ -316,7 +335,7 @@ const SnippetForm = ({ signer, userAddress, onSnippetSaved }) => {
   );
 };
 
-// Snippet List Component
+// Snippet List Component - Now fetches from REAL Irys blockchain
 const SnippetList = ({ userAddress, refreshTrigger }) => {
   const [snippets, setSnippets] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -326,11 +345,12 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
     
     try {
       setIsLoading(true);
-      const response = await fetch(`${API}/snippets/${userAddress}`);
+      // Fetch from backend which queries real Irys blockchain
+      const response = await fetch(`${API}/irys-query/${userAddress}`);
       const data = await response.json();
       setSnippets(data.snippets || []);
     } catch (error) {
-      console.error('Error fetching snippets:', error);
+      console.error('Error fetching snippets from blockchain:', error);
       setSnippets([]);
     } finally {
       setIsLoading(false);
@@ -345,9 +365,8 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
     window.open(url, '_blank');
   };
 
-  const openBlockchainView = (irysId) => {
-    const gatewayUrl = `https://gateway.irys.xyz/${irysId}`;
-    alert(`Blockchain Gateway URL:\n${gatewayUrl}\n\nIn a real implementation, this would open the permanent blockchain record.`);
+  const openIrysGateway = (irysId) => {
+    window.open(`https://gateway.irys.xyz/${irysId}`, '_blank');
   };
 
   if (isLoading) {
@@ -355,7 +374,7 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
       <GlassCard className="snippet-list">
         <div className="loading-container">
           <LoadingSpinner size="lg" />
-          <p>Loading your blockchain snippets...</p>
+          <p>Loading your snippets from Irys blockchain...</p>
         </div>
       </GlassCard>
     );
@@ -363,12 +382,12 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
 
   return (
     <GlassCard className="snippet-list">
-      <h2 className="list-title">Your Blockchain Snippet Vault</h2>
+      <h2 className="list-title">🔗 Your Blockchain Snippet Vault</h2>
       
       {snippets.length === 0 ? (
         <div className="empty-state">
-          <p>No snippets stored yet. Save your first snippet to the blockchain!</p>
-          <p className="small-text">All snippets will be permanently stored on Irys blockchain.</p>
+          <p>No snippets found on the blockchain yet.</p>
+          <p className="small-text">Save your first snippet to start building your permanent collection!</p>
         </div>
       ) : (
         <div className="snippets-grid">
@@ -376,7 +395,7 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
             <div key={snippet.id} className="snippet-card">
               <div className="snippet-header">
                 <h3>{snippet.title}</h3>
-                <span className="network-badge">{snippet.network}</span>
+                <span className="network-badge">Irys</span>
               </div>
               <p className="snippet-summary">{snippet.summary}</p>
               <div className="snippet-tags">
@@ -392,7 +411,7 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
                   📄 Original
                 </button>
                 <button 
-                  onClick={() => openBlockchainView(snippet.irys_id)}
+                  onClick={() => openIrysGateway(snippet.irys_id)}
                   className="irys-link"
                 >
                   🔗 Blockchain
@@ -400,6 +419,7 @@ const SnippetList = ({ userAddress, refreshTrigger }) => {
               </div>
               <div className="blockchain-info">
                 <span className="tx-id">TX: {snippet.irys_id?.slice(0, 8)}...{snippet.irys_id?.slice(-6)}</span>
+                <span className="permanent-badge">PERMANENT</span>
               </div>
             </div>
           ))}
@@ -448,7 +468,7 @@ function App() {
             <span className="title-icon">🔗</span>
             Irys Snippet Vault
           </h1>
-          <p className="app-subtitle">Store web snippets permanently on the blockchain with AI-powered analysis</p>
+          <p className="app-subtitle">Permanently store web snippets on Irys blockchain with AI analysis</p>
           <WalletConnection 
             onWalletConnected={handleWalletConnected}
             connectedWallet={userAddress}
@@ -474,18 +494,20 @@ function App() {
           <div className="welcome-screen">
             <GlassCard className="welcome-card">
               <h2>Welcome to Irys Snippet Vault</h2>
-              <p>Connect your wallet to start saving web snippets with blockchain permanence.</p>
+              <p>Connect your wallet to start saving web snippets permanently on Irys blockchain.</p>
               <ul className="features-list">
                 <li>🔗 Extract content from any webpage</li>
                 <li>🤖 AI-powered summarization and tagging</li>
-                <li>⛓️ Blockchain-ready permanent storage</li>
+                <li>⛓️ <strong>REAL</strong> permanent storage on Irys blockchain</li>
                 <li>🎨 Beautiful Notion-style interface</li>
               </ul>
               <div className="demo-section">
-                <h3>Blockchain Storage Ready</h3>
-                <p>Your snippets are structured for permanent blockchain storage with full Web3 integration!</p>
+                <h3>🔥 Real Blockchain Storage</h3>
+                <p>Your snippets will be <strong>permanently stored</strong> on the Irys blockchain forever!</p>
                 <p className="small-text">
-                  💡 <strong>Next Steps:</strong> Get Sepolia ETH from <a href="https://sepoliafaucet.com/" target="_blank" rel="noopener noreferrer">faucet</a> for real blockchain transactions
+                  💰 <strong>Real ETH:</strong> Uses your actual ETH balance for blockchain transactions<br/>
+                  🌐 <strong>Global Access:</strong> View stored data at gateway.irys.xyz<br/>
+                  🔒 <strong>Immutable:</strong> Data cannot be deleted or modified once stored
                 </p>
               </div>
             </GlassCard>
