@@ -92,16 +92,20 @@ class IrysSnippetVaultTester:
             }
         )
 
-    def test_save_snippet_metadata(self, url, title, summary, tags, network="devnet"):
+    def test_save_snippet_metadata(self, url, title, summary, tags, network="devnet", wallet_address=None):
         """Test saving snippet metadata"""
-        return self.run_test(
+        if wallet_address is None:
+            wallet_address = self.test_wallet_address_1
+        
+        snippet_id = f"test-irys-id-{uuid.uuid4()}"
+        success, response = self.run_test(
             "Save Snippet Metadata",
             "POST",
             "save-snippet-metadata",
             200,
             data={
-                "wallet_address": self.test_wallet_address,
-                "irys_id": f"test-irys-id-{uuid.uuid4()}",
+                "wallet_address": wallet_address,
+                "irys_id": snippet_id,
                 "url": url,
                 "title": title,
                 "summary": summary,
@@ -109,13 +113,173 @@ class IrysSnippetVaultTester:
                 "network": network
             }
         )
+        if success:
+            self.test_snippet_id = snippet_id
+        return success, response
 
-    def test_get_user_snippets(self):
+    def test_get_user_snippets(self, wallet_address=None):
         """Test getting user snippets"""
+        if wallet_address is None:
+            wallet_address = self.test_wallet_address_1
         return self.run_test(
             "Get User Snippets",
             "GET",
-            f"snippets/{self.test_wallet_address}",
+            f"snippets/{wallet_address}",
+            200
+        )
+
+    # NEW SOCIAL FEATURES TESTS
+    
+    def test_create_user_profile(self, wallet_address=None, username=None, bio=None):
+        """Test creating/updating user profile"""
+        if wallet_address is None:
+            wallet_address = self.test_wallet_address_1
+        if username is None:
+            username = f"testuser_{uuid.uuid4().hex[:8]}"
+        if bio is None:
+            bio = "This is a test user profile for social features testing"
+            
+        return self.run_test(
+            "Create User Profile",
+            "POST",
+            "users/profile",
+            200,
+            data={
+                "wallet_address": wallet_address,
+                "username": username,
+                "bio": bio
+            }
+        )
+
+    def test_get_user_profile(self, wallet_address=None):
+        """Test getting user profile"""
+        if wallet_address is None:
+            wallet_address = self.test_wallet_address_1
+        return self.run_test(
+            "Get User Profile",
+            "GET",
+            f"users/{wallet_address}",
+            200
+        )
+
+    def test_public_feed(self):
+        """Test getting public feed"""
+        return self.run_test(
+            "Get Public Feed",
+            "GET",
+            "feed/public",
+            200,
+            params={"skip": 0, "limit": 10}
+        )
+
+    def test_discover_users(self):
+        """Test user discovery"""
+        return self.run_test(
+            "Discover Users",
+            "GET",
+            "users/discover",
+            200,
+            params={"skip": 0, "limit": 10}
+        )
+
+    def test_follow_user(self, follower_address=None, following_address=None):
+        """Test following a user"""
+        if follower_address is None:
+            follower_address = self.test_wallet_address_1
+        if following_address is None:
+            following_address = self.test_wallet_address_2
+            
+        return self.run_test(
+            "Follow User",
+            "POST",
+            "social/follow",
+            200,
+            data={
+                "follower_address": follower_address,
+                "following_address": following_address
+            }
+        )
+
+    def test_unfollow_user(self, follower_address=None, following_address=None):
+        """Test unfollowing a user"""
+        if follower_address is None:
+            follower_address = self.test_wallet_address_1
+        if following_address is None:
+            following_address = self.test_wallet_address_2
+            
+        return self.run_test(
+            "Unfollow User",
+            "DELETE",
+            f"social/unfollow/{follower_address}/{following_address}",
+            200
+        )
+
+    def test_like_snippet(self, user_address=None, snippet_id=None):
+        """Test liking a snippet"""
+        if user_address is None:
+            user_address = self.test_wallet_address_1
+        if snippet_id is None:
+            snippet_id = self.test_snippet_id or f"test-snippet-{uuid.uuid4()}"
+            
+        return self.run_test(
+            "Like Snippet",
+            "POST",
+            "social/like",
+            200,
+            data={
+                "user_address": user_address,
+                "snippet_id": snippet_id
+            }
+        )
+
+    def test_unlike_snippet(self, user_address=None, snippet_id=None):
+        """Test unliking a snippet (toggle functionality)"""
+        if user_address is None:
+            user_address = self.test_wallet_address_1
+        if snippet_id is None:
+            snippet_id = self.test_snippet_id or f"test-snippet-{uuid.uuid4()}"
+            
+        return self.run_test(
+            "Unlike Snippet (Toggle)",
+            "POST",
+            "social/like",
+            200,
+            data={
+                "user_address": user_address,
+                "snippet_id": snippet_id
+            }
+        )
+
+    def test_add_comment(self, user_address=None, snippet_id=None, content=None):
+        """Test adding a comment to a snippet"""
+        if user_address is None:
+            user_address = self.test_wallet_address_1
+        if snippet_id is None:
+            snippet_id = self.test_snippet_id or f"test-snippet-{uuid.uuid4()}"
+        if content is None:
+            content = "This is a test comment for the social features testing"
+            
+        return self.run_test(
+            "Add Comment",
+            "POST",
+            "social/comment",
+            200,
+            data={
+                "user_address": user_address,
+                "snippet_id": snippet_id,
+                "content": content
+            }
+        )
+
+    def test_get_comments(self, snippet_id=None):
+        """Test getting comments for a snippet"""
+        if snippet_id is None:
+            snippet_id = self.test_snippet_id or f"test-snippet-{uuid.uuid4()}"
+            
+        return self.run_test(
+            "Get Comments",
+            "GET",
+            f"social/comments/{snippet_id}",
             200
         )
 
