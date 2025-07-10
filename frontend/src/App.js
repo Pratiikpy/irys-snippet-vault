@@ -180,6 +180,8 @@ const PublicFeed = ({ userAddress }) => {
   const [feed, setFeed] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [selectedSnippetId, setSelectedSnippetId] = useState(null);
 
   useEffect(() => {
     fetchPublicFeed();
@@ -221,6 +223,18 @@ const PublicFeed = ({ userAddress }) => {
     } catch (error) {
       console.error('Error liking snippet:', error);
     }
+  };
+
+  const handleOpenComments = (snippetId) => {
+    setSelectedSnippetId(snippetId);
+    setCommentModalOpen(true);
+  };
+
+  const handleCloseComments = () => {
+    setCommentModalOpen(false);
+    setSelectedSnippetId(null);
+    // Refresh feed to update comment count
+    fetchPublicFeed();
   };
 
   if (isLoading) {
@@ -294,7 +308,10 @@ const PublicFeed = ({ userAddress }) => {
                 >
                   ❤️ {snippet.likes_count || 0}
                 </button>
-                <button className="action-button">
+                <button 
+                  onClick={() => handleOpenComments(snippet.irys_id)}
+                  className="action-button"
+                >
                   💬 {snippet.comments_count || 0}
                 </button>
               </div>
@@ -302,6 +319,13 @@ const PublicFeed = ({ userAddress }) => {
           ))}
         </div>
       )}
+
+      <CommentSystem
+        snippetId={selectedSnippetId}
+        userAddress={userAddress}
+        isOpen={commentModalOpen}
+        onClose={handleCloseComments}
+      />
     </div>
   );
 };
