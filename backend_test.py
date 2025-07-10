@@ -3,15 +3,22 @@ import json
 import sys
 import uuid
 from datetime import datetime
+import os
 
 class IrysSnippetVaultTester:
-    def __init__(self, base_url="http://0.0.0.0:8001"):
+    def __init__(self, base_url=None):
+        # Use the production URL from frontend/.env
+        if base_url is None:
+            base_url = "https://e9db8c3f-2684-4912-b204-49e2b9a9cd3a.preview.emergentagent.com"
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
         self.tests_passed = 0
-        self.test_wallet_address = f"0x{uuid.uuid4().hex[:40]}"  # Generate a random wallet address for testing
+        # Generate realistic test data
+        self.test_wallet_address_1 = f"0x{uuid.uuid4().hex[:40]}"
+        self.test_wallet_address_2 = f"0x{uuid.uuid4().hex[:40]}"
         self.saved_snippet_id = None
+        self.test_snippet_id = None
 
     def run_test(self, name, method, endpoint, expected_status, data=None):
         """Run a single API test"""
