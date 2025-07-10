@@ -4,6 +4,7 @@ import sys
 import uuid
 from datetime import datetime
 import os
+import base64
 
 class IrysSnippetVaultTester:
     def __init__(self, base_url=None):
