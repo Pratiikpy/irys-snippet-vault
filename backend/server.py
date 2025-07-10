@@ -262,7 +262,7 @@ def extract_meaningful_content(soup):
 # Routes
 @api_router.get("/")
 async def root():
-    return {"message": "Irys Snippet Vault API - Real Blockchain Integration Active"}
+    return {"message": "Irys Snippet Vault API - Social Features Active"}
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
