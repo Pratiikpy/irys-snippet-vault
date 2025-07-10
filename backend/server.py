@@ -143,22 +143,28 @@ class SnippetMetadata(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     wallet_address: str
     irys_id: str
-    url: str
+    url: Optional[str] = None  # Optional for non-web content
     title: str
     summary: str
     tags: List[str]
     network: str
+    content_type: str = "web_snippet"  # web_snippet, text, poetry, image, thought, quote
+    mood: Optional[str] = None  # For creative content
+    theme: Optional[str] = None  # For creative content
     is_public: bool = True
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 class SnippetMetadataCreate(BaseModel):
     wallet_address: str
     irys_id: str
-    url: str
+    url: Optional[str] = None
     title: str
     summary: str
     tags: List[str]
     network: str
+    content_type: str = "web_snippet"
+    mood: Optional[str] = None
+    theme: Optional[str] = None
     is_public: bool = True
 
 # Initialize Irys service
