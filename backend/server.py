@@ -451,18 +451,13 @@ async def process_image_content(request: ImageContentRequest):
         if request.description:
             content_to_analyze += f" with description: {request.description}"
         
-        # Create Claude chat instance for image description
-        chat = LlmChat(
-            api_key=claude_api_key,
-            session_id=f"image-{uuid.uuid4()}",
-            system_message="You are an image content expert. For image content provided, respond with: one sentence description/summary, 3 relevant tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
-        ).with_model("anthropic", "claude-3-5-sonnet-20241022")
-        
-        # Create user message
-        user_message = UserMessage(text=f"Please analyze and describe this image content: {content_to_analyze}")
+        system_message = "You are an image content expert. For image content provided, respond with: one sentence description/summary, 3 relevant tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+        user_prompt = f"Please analyze and describe this image content: {content_to_analyze}"
         
         # Get response from Claude
-        response = await chat.send_message(user_message)
+        response = await call_claude_api(claude_api_key, user_prompt, system_message)
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to get response from Claude API")
         
         # Parse response
         parts = response.split('|')
