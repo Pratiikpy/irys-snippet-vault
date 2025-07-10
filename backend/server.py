@@ -508,18 +508,10 @@ async def summarize_snippet(request: SummarizeRequest):
             content_to_analyze = request.content or request.snippet
             user_prompt = f"Please analyze this {request.content_type} titled '{request.title}'. Content: {content_to_analyze}"
         
-        # Create Claude chat instance
-        chat = LlmChat(
-            api_key=claude_api_key,
-            session_id=f"summarize-{uuid.uuid4()}",
-            system_message=system_message
-        ).with_model("anthropic", "claude-3-5-sonnet-20241022")
-        
-        # Create user message
-        user_message = UserMessage(text=user_prompt)
-        
         # Get response from Claude
-        response = await chat.send_message(user_message)
+        response = await call_claude_api(claude_api_key, user_prompt, system_message)
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to get response from Claude API")
         
         # Parse response based on content type
         if request.content_type == "web_snippet":
