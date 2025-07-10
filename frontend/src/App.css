@@ -5,7 +5,7 @@
   padding: 0;
   box-sizing: border-box;
   /* Custom cursor - fallback to auto if image not available */
-  cursor: url('/cursor-cat.png') 16 16, auto;
+  cursor: url('/cursor-cat.png') 16 16, url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANCSURBVFiFtZc9aBRBFMd/M7ubTWI0H4qNjY1YWNhYWKsQG1sLwcJCG1sLBQsLG1sLwcLCQltbCwsLbW0tLCwsLGxtLSws') 16 16, auto;
 }
 
 body {
