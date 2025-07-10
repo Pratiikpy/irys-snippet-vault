@@ -535,13 +535,37 @@ body {
   list-style: none;
   text-align: left;
   max-width: 400px;
-  margin: 0 auto;
+  margin: 0 auto 2rem;
 }
 
 .features-list li {
   padding: 0.5rem 0;
   color: rgba(255, 255, 255, 0.9);
   font-size: 1rem;
+}
+
+.demo-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  border-radius: 12px;
+}
+
+.demo-section h3 {
+  color: #00ffff;
+  margin-bottom: 0.5rem;
+}
+
+.demo-section p {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 0;
+}
+
+.irys-id {
+  color: #8a2be2;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
 }
 
 /* Loading Spinner */
