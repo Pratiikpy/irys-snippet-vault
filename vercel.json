@@ -1,0 +1,31 @@
+{
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    },
+    {
+      "src": "backend/server.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/server.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/build/index.html"
+    }
+  ],
+  "env": {
+    "CLAUDE_API_KEY": "@claude-api-key",
+    "IRYS_PRIVATE_KEY": "@irys-private-key",
+    "MONGO_URL": "@mongo-url",
+    "DB_NAME": "@db-name"
+  }
+}
