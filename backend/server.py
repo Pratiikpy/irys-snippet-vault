@@ -450,12 +450,254 @@ async def query_irys_snippets(wallet_address: str):
         print(f"❌ Query failed: {e}")
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
+# NEW SOCIAL FEATURES ENDPOINTS
+
+@api_router.post("/users/profile")
+async def create_user_profile(request: CreateUserProfile):
+    """Create or update user profile."""
+    try:
+        # Check if profile already exists
+        existing = await db.user_profiles.find_one({"wallet_address": request.wallet_address})
+        
+        if existing:
+            # Update existing profile
+            update_data = {k: v for k, v in request.dict().items() if v is not None}
+            await db.user_profiles.update_one(
+                {"wallet_address": request.wallet_address},
+                {"$set": update_data}
+            )
+            updated_profile = await db.user_profiles.find_one({"wallet_address": request.wallet_address})
+            updated_profile["_id"] = str(updated_profile["_id"])
+            return updated_profile
+        else:
+            # Create new profile
+            profile = UserProfile(**request.dict())
+            await db.user_profiles.insert_one(profile.dict())
+            return profile
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating profile: {str(e)}")
+
+@api_router.get("/users/{wallet_address}")
+async def get_user_profile(wallet_address: str):
+    """Get user profile by wallet address."""
+    try:
+        profile = await db.user_profiles.find_one({"wallet_address": wallet_address})
+        if profile:
+            profile["_id"] = str(profile["_id"])
+            return profile
+        else:
+            # Return basic profile if none exists
+            return {
+                "wallet_address": wallet_address,
+                "username": None,
+                "bio": None,
+                "followers_count": 0,
+                "following_count": 0,
+                "snippets_count": 0
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching profile: {str(e)}")
+
+@api_router.get("/feed/public")
+async def get_public_feed(skip: int = 0, limit: int = 20):
+    """Get public feed of all snippets with social data."""
+    try:
+        # Get recent snippets from all users
+        snippets = await db.snippet_metadata.find(
+            {"is_public": True}
+        ).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+        
+        feed_items = []
+        for snippet in snippets:
+            snippet["_id"] = str(snippet["_id"])
+            
+            # Get user profile
+            user_profile = await db.user_profiles.find_one({"wallet_address": snippet["wallet_address"]})
+            
+            # Get social stats
+            likes_count = await db.snippet_likes.count_documents({"snippet_id": snippet["irys_id"]})
+            comments_count = await db.snippet_comments.count_documents({"snippet_id": snippet["irys_id"]})
+            
+            feed_item = PublicSnippet(
+                id=snippet["id"],
+                irys_id=snippet["irys_id"],
+                wallet_address=snippet["wallet_address"],
+                username=user_profile.get("username") if user_profile else None,
+                url=snippet["url"],
+                title=snippet["title"],
+                summary=snippet["summary"],
+                tags=snippet["tags"],
+                network=snippet["network"],
+                created_at=snippet["timestamp"],
+                likes_count=likes_count,
+                comments_count=comments_count
+            )
+            feed_items.append(feed_item.dict())
+        
+        return {"feed": feed_items, "has_more": len(feed_items) == limit}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching feed: {str(e)}")
+
+@api_router.get("/users/discover")
+async def discover_users(skip: int = 0, limit: int = 20):
+    """Discover users with most snippets or followers."""
+    try:
+        users = await db.user_profiles.find().sort([
+            ("snippets_count", -1),
+            ("followers_count", -1)
+        ]).skip(skip).limit(limit).to_list(limit)
+        
+        for user in users:
+            user["_id"] = str(user["_id"])
+        
+        return {"users": users, "has_more": len(users) == limit}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error discovering users: {str(e)}")
+
+@api_router.post("/social/follow")
+async def follow_user(request: FollowRequest):
+    """Follow another user."""
+    try:
+        # Check if already following
+        existing = await db.user_follows.find_one({
+            "follower_address": request.follower_address,
+            "following_address": request.following_address
+        })
+        
+        if existing:
+            return {"message": "Already following this user"}
+        
+        # Create follow relationship
+        follow_data = {
+            "id": str(uuid.uuid4()),
+            "follower_address": request.follower_address,
+            "following_address": request.following_address,
+            "created_at": datetime.utcnow()
+        }
+        await db.user_follows.insert_one(follow_data)
+        
+        # Update follow counts
+        await db.user_profiles.update_one(
+            {"wallet_address": request.follower_address},
+            {"$inc": {"following_count": 1}}
+        )
+        await db.user_profiles.update_one(
+            {"wallet_address": request.following_address},
+            {"$inc": {"followers_count": 1}}
+        )
+        
+        return {"message": "Successfully followed user"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error following user: {str(e)}")
+
+@api_router.delete("/social/unfollow/{follower_address}/{following_address}")
+async def unfollow_user(follower_address: str, following_address: str):
+    """Unfollow a user."""
+    try:
+        # Remove follow relationship
+        result = await db.user_follows.delete_one({
+            "follower_address": follower_address,
+            "following_address": following_address
+        })
+        
+        if result.deleted_count > 0:
+            # Update follow counts
+            await db.user_profiles.update_one(
+                {"wallet_address": follower_address},
+                {"$inc": {"following_count": -1}}
+            )
+            await db.user_profiles.update_one(
+                {"wallet_address": following_address},
+                {"$inc": {"followers_count": -1}}
+            )
+            return {"message": "Successfully unfollowed user"}
+        else:
+            return {"message": "Follow relationship not found"}
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error unfollowing user: {str(e)}")
+
+@api_router.post("/social/like")
+async def like_snippet(request: LikeRequest):
+    """Like a snippet."""
+    try:
+        # Check if already liked
+        existing = await db.snippet_likes.find_one({
+            "user_address": request.user_address,
+            "snippet_id": request.snippet_id
+        })
+        
+        if existing:
+            # Unlike
+            await db.snippet_likes.delete_one({
+                "user_address": request.user_address,
+                "snippet_id": request.snippet_id
+            })
+            return {"message": "Snippet unliked", "liked": False}
+        else:
+            # Like
+            like_data = {
+                "id": str(uuid.uuid4()),
+                "user_address": request.user_address,
+                "snippet_id": request.snippet_id,
+                "created_at": datetime.utcnow()
+            }
+            await db.snippet_likes.insert_one(like_data)
+            return {"message": "Snippet liked", "liked": True}
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error liking snippet: {str(e)}")
+
+@api_router.post("/social/comment")
+async def add_comment(request: CommentRequest):
+    """Add a comment to a snippet."""
+    try:
+        comment = Comment(
+            user_address=request.user_address,
+            snippet_id=request.snippet_id,
+            content=request.content
+        )
+        await db.snippet_comments.insert_one(comment.dict())
+        return comment
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding comment: {str(e)}")
+
+@api_router.get("/social/comments/{snippet_id}")
+async def get_comments(snippet_id: str):
+    """Get comments for a snippet."""
+    try:
+        comments = await db.snippet_comments.find({"snippet_id": snippet_id}).sort("created_at", -1).to_list(100)
+        
+        # Enrich with user data
+        for comment in comments:
+            comment["_id"] = str(comment["_id"])
+            user_profile = await db.user_profiles.find_one({"wallet_address": comment["user_address"]})
+            comment["username"] = user_profile.get("username") if user_profile else None
+        
+        return {"comments": comments}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching comments: {str(e)}")
+
 @api_router.post("/save-snippet-metadata", response_model=SnippetMetadata)
 async def save_snippet_metadata(request: SnippetMetadataCreate):
-    """Save snippet metadata to database (backup/legacy)."""
+    """Save snippet metadata to database with social features."""
     try:
         metadata = SnippetMetadata(**request.dict())
         await db.snippet_metadata.insert_one(metadata.dict())
+        
+        # Update user's snippet count
+        await db.user_profiles.update_one(
+            {"wallet_address": request.wallet_address},
+            {"$inc": {"snippets_count": 1}},
+            upsert=True
+        )
+        
         return metadata
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving metadata: {str(e)}")
