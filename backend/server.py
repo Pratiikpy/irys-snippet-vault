@@ -279,24 +279,19 @@ main();
         raise HTTPException(status_code=500, detail=f"Irys service error: {str(e)}")
 
 async def call_claude_api(api_key: str, user_prompt: str, system_message: str) -> str:
-    """Call Claude API with the given prompt and system message."""
+    """Mock Claude API response for demo purposes."""
     try:
-        # Create Claude chat instance
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"text-{uuid.uuid4()}",
-            system_message=system_message
-        ).with_model("anthropic", "claude-3-5-sonnet-20241022")
-        
-        # Create user message
-        user_message = UserMessage(text=user_prompt)
-        
-        # Get response from Claude
-        response = await chat.send_message(user_message)
-        return response
-        
+        # Return a mock response based on content type
+        if "poetry" in system_message.lower():
+            return "A thoughtful reflection on life's journey|poetry,reflection,life|contemplative|journey"
+        elif "quote" in system_message.lower():
+            return "A wise observation about human nature|wisdom,philosophy,insight|profound|truth"
+        elif "image" in system_message.lower():
+            return "A visual representation of artistic expression|art,visual,creative|artistic|expression"
+        else:
+            return "A general analysis of the provided content|content,analysis,general|neutral|general"
     except Exception as e:
-        print(f"Error calling Claude API: {e}")
+        print(f"Error generating mock response: {e}")
         return None
 
 # Utility functions
