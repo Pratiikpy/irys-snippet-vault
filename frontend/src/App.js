@@ -283,11 +283,28 @@ const PublicFeed = ({ userAddress }) => {
                     {new Date(snippet.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <span className="network-badge">{snippet.network}</span>
+                <div className="content-type-indicator">
+                  <span className="content-type-badge">
+                    {snippet.content_type === 'web_snippet' && '🔗'} 
+                    {snippet.content_type === 'text' && '📝'}
+                    {snippet.content_type === 'poetry' && '🎭'}
+                    {snippet.content_type === 'image' && '🖼️'}
+                    {snippet.content_type === 'quote' && '💬'}
+                    {snippet.content_type || 'web_snippet'}
+                  </span>
+                  <span className="network-badge">{snippet.network}</span>
+                </div>
               </div>
               
               <h3 className="snippet-title">{snippet.title}</h3>
               <p className="snippet-summary">{snippet.summary}</p>
+              
+              {snippet.mood && (
+                <div className="content-metadata">
+                  <span className="mood-indicator">😊 {snippet.mood}</span>
+                  {snippet.theme && <span className="theme-indicator">🎯 {snippet.theme}</span>}
+                </div>
+              )}
               
               <div className="snippet-tags">
                 {snippet.tags && snippet.tags.map((tag, index) => (
@@ -296,12 +313,14 @@ const PublicFeed = ({ userAddress }) => {
               </div>
               
               <div className="snippet-actions">
-                <button 
-                  onClick={() => window.open(snippet.url, '_blank')}
-                  className="action-button"
-                >
-                  🔗 View
-                </button>
+                {snippet.url && (
+                  <button 
+                    onClick={() => window.open(snippet.url, '_blank')}
+                    className="action-button"
+                  >
+                    🔗 View
+                  </button>
+                )}
                 <button 
                   onClick={() => handleLike(snippet.irys_id)}
                   className={`action-button like-button ${snippet.is_liked ? 'liked' : ''}`}
@@ -313,6 +332,12 @@ const PublicFeed = ({ userAddress }) => {
                   className="action-button"
                 >
                   💬 {snippet.comments_count || 0}
+                </button>
+                <button 
+                  onClick={() => window.open(snippet.network === 'devnet' ? `https://devnet.irys.xyz/${snippet.irys_id}` : `https://gateway.irys.xyz/${snippet.irys_id}`, '_blank')}
+                  className="action-button blockchain-button"
+                >
+                  ⛓️ Blockchain
                 </button>
               </div>
             </GlassCard>
