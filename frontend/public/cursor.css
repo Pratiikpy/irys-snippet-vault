@@ -1,0 +1,75 @@
+/* Custom Cursor Styles */
+
+/* Default cursor for the entire application */
+* {
+  cursor: url('/cursor-cat.png') 16 16, auto !important;
+}
+
+/* Specific cursor states for interactive elements */
+button, 
+.neon-button, 
+a, 
+input[type="submit"], 
+input[type="button"],
+.clickable {
+  cursor: url('/cursor-cat-pointer.png') 16 16, pointer !important;
+}
+
+/* Text input cursor */
+input[type="text"], 
+input[type="url"], 
+input[type="email"], 
+input[type="password"],
+textarea {
+  cursor: url('/cursor-cat-text.png') 16 16, text !important;
+}
+
+/* Loading/wait cursor */
+.loading, 
+.disabled,
+button:disabled {
+  cursor: url('/cursor-cat-wait.png') 16 16, wait !important;
+}
+
+/* Hover effects for special elements */
+.wallet-connection:hover,
+.snippet-card:hover,
+.tag:hover {
+  cursor: url('/cursor-cat-pointer.png') 16 16, pointer !important;
+}
+
+/* Ensure custom cursor shows on all interactive elements */
+.glass-card,
+.snippet-form,
+.snippet-list,
+.app-header {
+  cursor: url('/cursor-cat.png') 16 16, auto !important;
+}
+
+/* Special cursor for the gradient orbs (just for fun) */
+.gradient-orb {
+  cursor: url('/cursor-cat.png') 16 16, auto !important;
+}
+
+/* Make sure the cursor changes work on mobile too */
+@media (hover: hover) {
+  .neon-button:hover {
+    cursor: url('/cursor-cat-pointer.png') 16 16, pointer !important;
+  }
+}
+
+/* Fallback for when custom cursor images aren't available */
+.no-custom-cursor * {
+  cursor: auto !important;
+}
+
+.no-custom-cursor button,
+.no-custom-cursor .neon-button,
+.no-custom-cursor a {
+  cursor: pointer !important;
+}
+
+.no-custom-cursor input[type="text"],
+.no-custom-cursor textarea {
+  cursor: text !important;
+}
