@@ -335,6 +335,124 @@ async def extract_snippet(request: UrlSnippetRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing content: {str(e)}")
 
+@api_router.post("/process-text", response_model=SummarizeResponse)
+async def process_text_content(request: TextContentRequest):
+    """Process text/poetry content with AI analysis for mood and themes."""
+    try:
+        claude_api_key = os.environ.get('CLAUDE_API_KEY')
+        if not claude_api_key:
+            raise HTTPException(status_code=500, detail="Claude API key not configured")
+        
+        # Create appropriate prompt based on content type
+        if request.content_type == "poetry":
+            system_message = "You are a poetry analysis expert. For each poem provided, respond with: one sentence summary, 3 thematic tags, mood (one word like 'melancholic', 'joyful', 'contemplative'), and theme (one word like 'love', 'nature', 'loss'). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+            user_prompt = f"Please analyze this poem titled '{request.title}'. Content: {request.content}"
+        elif request.content_type == "quote":
+            system_message = "You are a quote analysis expert. For each quote provided, respond with: one sentence about its meaning, 3 topical tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+            user_prompt = f"Please analyze this quote titled '{request.title}'. Content: {request.content}"
+        else:  # general text/thought
+            system_message = "You are a text analysis expert. For each text provided, respond with: one sentence summary, 3 topical tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+            user_prompt = f"Please analyze this text titled '{request.title}'. Content: {request.content}"
+        
+        # Create Claude chat instance
+        chat = LlmChat(
+            api_key=claude_api_key,
+            session_id=f"analyze-{request.content_type}-{uuid.uuid4()}",
+            system_message=system_message
+        ).with_model("anthropic", "claude-3-5-sonnet-20241022")
+        
+        # Create user message
+        user_message = UserMessage(text=user_prompt)
+        
+        # Get response from Claude
+        response = await chat.send_message(user_message)
+        
+        # Parse response
+        parts = response.split('|')
+        if len(parts) >= 4:
+            summary = parts[0].strip()
+            tags = [tag.strip() for tag in parts[1].split(',')][:3]
+            mood = parts[2].strip()
+            theme = parts[3].strip()
+        else:
+            # Fallback parsing
+            summary = response.strip()
+            tags = [request.content_type, "creative", "personal"]
+            mood = "reflective"
+            theme = "personal"
+        
+        # Clean up summary
+        if not summary.endswith('.'):
+            summary += '.'
+        
+        return SummarizeResponse(
+            summary=summary,
+            tags=tags,
+            mood=mood,
+            theme=theme
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error analyzing content: {str(e)}")
+
+@api_router.post("/process-image", response_model=SummarizeResponse)
+async def process_image_content(request: ImageContentRequest):
+    """Process image content with AI description generation."""
+    try:
+        claude_api_key = os.environ.get('CLAUDE_API_KEY')
+        if not claude_api_key:
+            raise HTTPException(status_code=500, detail="Claude API key not configured")
+        
+        # For now, create a description based on title and user description
+        # In future, could integrate with vision AI for actual image analysis
+        
+        content_to_analyze = f"Image titled '{request.title}'"
+        if request.description:
+            content_to_analyze += f" with description: {request.description}"
+        
+        # Create Claude chat instance for image description
+        chat = LlmChat(
+            api_key=claude_api_key,
+            session_id=f"image-{uuid.uuid4()}",
+            system_message="You are an image content expert. For image content provided, respond with: one sentence description/summary, 3 relevant tags, mood (one word), and theme (one word). Format: 'Summary here|tag1,tag2,tag3|mood|theme'"
+        ).with_model("anthropic", "claude-3-5-sonnet-20241022")
+        
+        # Create user message
+        user_message = UserMessage(text=f"Please analyze and describe this image content: {content_to_analyze}")
+        
+        # Get response from Claude
+        response = await chat.send_message(user_message)
+        
+        # Parse response
+        parts = response.split('|')
+        if len(parts) >= 4:
+            summary = parts[0].strip()
+            tags = [tag.strip() for tag in parts[1].split(',')][:3]
+            mood = parts[2].strip()
+            theme = parts[3].strip()
+        else:
+            # Fallback
+            summary = f"Image: {request.title}"
+            if request.description:
+                summary += f" - {request.description}"
+            tags = ["image", "visual", "memory"]
+            mood = "captured"
+            theme = "visual"
+        
+        # Clean up summary
+        if not summary.endswith('.'):
+            summary += '.'
+        
+        return SummarizeResponse(
+            summary=summary,
+            tags=tags,
+            mood=mood,
+            theme=theme
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
+
 @api_router.post("/summarize", response_model=SummarizeResponse)
 async def summarize_snippet(request: SummarizeRequest):
     """Summarize snippet and generate tags using Claude AI."""
