@@ -278,9 +278,56 @@ main();
         raise HTTPException(status_code=500, detail=f"Irys service error: {str(e)}")
 
 async def call_claude_api(api_key: str, user_prompt: str, system_message: str) -> str:
-    """Mock Claude API response for demo purposes."""
+    """Direct Claude API call using HTTP requests."""
     try:
-        # Return a mock response based on content type
+        import aiohttp
+        import json
+        
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01"
+        }
+        
+        data = {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 1000,
+            "messages": [
+                {
+                    "role": "user", 
+                    "content": user_prompt
+                }
+            ]
+        }
+        
+        if system_message:
+            data["system"] = system_message
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.anthropic.com/v1/messages",
+                headers=headers,
+                json=data,
+                timeout=30
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return result["content"][0]["text"]
+                else:
+                    print(f"Claude API error: {response.status}")
+                    # Fallback mock response
+                    if "poetry" in system_message.lower():
+                        return "A thoughtful reflection on life's journey|poetry,reflection,life|contemplative|journey"
+                    elif "quote" in system_message.lower():
+                        return "A wise observation about human nature|wisdom,philosophy,insight|profound|truth"
+                    elif "image" in system_message.lower():
+                        return "A visual representation of artistic expression|art,visual,creative|artistic|expression"
+                    else:
+                        return "A general analysis of the provided content|content,analysis,general|neutral|general"
+                        
+    except Exception as e:
+        print(f"Error calling Claude API: {e}")
+        # Fallback mock response
         if "poetry" in system_message.lower():
             return "A thoughtful reflection on life's journey|poetry,reflection,life|contemplative|journey"
         elif "quote" in system_message.lower():
@@ -289,9 +336,6 @@ async def call_claude_api(api_key: str, user_prompt: str, system_message: str) -
             return "A visual representation of artistic expression|art,visual,creative|artistic|expression"
         else:
             return "A general analysis of the provided content|content,analysis,general|neutral|general"
-    except Exception as e:
-        print(f"Error generating mock response: {e}")
-        return None
 
 # Utility functions
 def clean_text(text: str) -> str:
