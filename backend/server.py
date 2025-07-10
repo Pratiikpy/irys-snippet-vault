@@ -69,6 +69,60 @@ class IrysUploadResponse(BaseModel):
     timestamp: int
     message: str
 
+# Social Features Models
+class UserProfile(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    wallet_address: str
+    username: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    followers_count: int = 0
+    following_count: int = 0
+    snippets_count: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class CreateUserProfile(BaseModel):
+    wallet_address: str
+    username: Optional[str] = None
+    bio: Optional[str] = None
+
+class FollowRequest(BaseModel):
+    follower_address: str
+    following_address: str
+
+class LikeRequest(BaseModel):
+    user_address: str
+    snippet_id: str
+
+class CommentRequest(BaseModel):
+    user_address: str
+    snippet_id: str
+    content: str
+
+class Comment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_address: str
+    snippet_id: str
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    likes_count: int = 0
+
+class PublicSnippet(BaseModel):
+    id: str
+    irys_id: str
+    wallet_address: str
+    username: Optional[str] = None
+    url: str
+    title: str
+    summary: str
+    tags: List[str]
+    network: str
+    created_at: datetime
+    likes_count: int = 0
+    comments_count: int = 0
+    is_liked: bool = False
+    is_bookmarked: bool = False
+
 class SnippetMetadata(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     wallet_address: str
@@ -78,6 +132,7 @@ class SnippetMetadata(BaseModel):
     summary: str
     tags: List[str]
     network: str
+    is_public: bool = True
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 class SnippetMetadataCreate(BaseModel):
@@ -88,6 +143,7 @@ class SnippetMetadataCreate(BaseModel):
     summary: str
     tags: List[str]
     network: str
+    is_public: bool = True
 
 # Initialize Irys service
 async def init_irys_service():
