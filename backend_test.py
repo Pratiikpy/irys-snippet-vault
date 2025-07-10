@@ -284,6 +284,250 @@ class IrysSnippetVaultTester:
             200
         )
 
+    # NEW ENHANCED CONTENT CREATION TESTS
+    
+    def test_process_text_content(self, content_type="text"):
+        """Test processing text/poetry content with AI analysis"""
+        test_content = {
+            "text": "This is a beautiful day to explore new technologies and create amazing applications.",
+            "poetry": "Roses are red, violets are blue, testing APIs is what we do, making sure they work for me and you.",
+            "quote": "The only way to do great work is to love what you do. - Steve Jobs"
+        }
+        
+        return self.run_test(
+            f"Process {content_type.title()} Content",
+            "POST",
+            "process-text",
+            200,
+            data={
+                "title": f"Test {content_type.title()}",
+                "content": test_content.get(content_type, test_content["text"]),
+                "content_type": content_type
+            }
+        )
+
+    def test_process_image_content(self):
+        """Test processing image content with AI description"""
+        # Create a simple base64 encoded test image (1x1 pixel PNG)
+        test_image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+        
+        return self.run_test(
+            "Process Image Content",
+            "POST",
+            "process-image",
+            200,
+            data={
+                "title": "Test Image Upload",
+                "image_data": test_image_base64,
+                "description": "A test image for API validation",
+                "content_type": "image"
+            }
+        )
+
+    def test_enhanced_summarize(self, content_type="web_snippet"):
+        """Test enhanced summarize endpoint with different content types"""
+        test_data = {
+            "web_snippet": {
+                "snippet": "This is a comprehensive guide to building modern web applications using React and FastAPI.",
+                "url": "https://example.com/web-dev-guide",
+                "title": "Modern Web Development Guide"
+            },
+            "text": {
+                "content": "Today I learned about the importance of testing in software development. It's crucial for maintaining code quality.",
+                "title": "Learning About Testing"
+            },
+            "poetry": {
+                "content": "In the realm of code and dreams, where logic meets art, we craft digital symphonies, each function a part.",
+                "title": "Digital Symphony"
+            }
+        }
+        
+        data = test_data.get(content_type, test_data["web_snippet"])
+        data["content_type"] = content_type
+        
+        return self.run_test(
+            f"Enhanced Summarize ({content_type})",
+            "POST",
+            "summarize",
+            200,
+            data=data
+        )
+
+    def test_irys_upload_simulation(self):
+        """Test Irys blockchain upload with realistic data"""
+        # Create test data that would be uploaded to Irys
+        test_data = {
+            "title": "Test Blockchain Upload",
+            "summary": "Testing the Irys blockchain integration with real data",
+            "tags": ["blockchain", "irys", "test"],
+            "content_type": "text",
+            "network": "devnet",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        # Simulate the data that would be sent to Irys
+        irys_data = {
+            "data": json.dumps(test_data),
+            "signature": f"test-signature-{uuid.uuid4()}",
+            "address": self.test_wallet_address_1,
+            "tags": [
+                {"name": "Content-Type", "value": "application/json"},
+                {"name": "App-Name", "value": "IrysSnippetVault"},
+                {"name": "Version", "value": "1.0"}
+            ]
+        }
+        
+        return self.run_test(
+            "Irys Blockchain Upload",
+            "POST",
+            "irys-upload",
+            200,
+            data=irys_data
+        )
+
+    def test_irys_query(self, wallet_address=None):
+        """Test querying Irys blockchain for user snippets"""
+        if wallet_address is None:
+            wallet_address = self.test_wallet_address_1
+            
+        return self.run_test(
+            "Query Irys Blockchain",
+            "GET",
+            f"irys-query/{wallet_address}",
+            200
+        )
+
+    def test_full_image_workflow(self):
+        """Test the complete image upload workflow"""
+        print("\n🖼️ Testing Complete Image Upload Workflow...")
+        
+        # Step 1: Process image content
+        success1, image_response = self.test_process_image_content()
+        if not success1:
+            print("❌ Image processing failed")
+            return False, {}
+        
+        print("✅ Step 1: Image processing successful")
+        
+        # Step 2: Create enhanced snippet data with image
+        test_image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+        
+        snippet_data = {
+            "title": "Beautiful Sunset Photo",
+            "summary": image_response.get("summary", "A beautiful image captured and stored on blockchain"),
+            "tags": image_response.get("tags", ["image", "photo", "memory"]),
+            "content_type": "image",
+            "mood": image_response.get("mood", "peaceful"),
+            "theme": image_response.get("theme", "nature"),
+            "image_data": test_image_base64,
+            "network": "devnet",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        # Step 3: Upload to Irys blockchain
+        irys_upload_data = {
+            "data": json.dumps(snippet_data),
+            "signature": f"image-signature-{uuid.uuid4()}",
+            "address": self.test_wallet_address_1,
+            "tags": [
+                {"name": "Content-Type", "value": "application/json"},
+                {"name": "App-Name", "value": "IrysSnippetVault"},
+                {"name": "Data-Type", "value": "image"},
+                {"name": "Mood", "value": snippet_data["mood"]},
+                {"name": "Theme", "value": snippet_data["theme"]}
+            ]
+        }
+        
+        success2, irys_response = self.run_test(
+            "Upload Image to Irys Blockchain",
+            "POST",
+            "irys-upload",
+            200,
+            data=irys_upload_data
+        )
+        
+        if not success2:
+            print("❌ Irys blockchain upload failed")
+            return False, {}
+        
+        print("✅ Step 2: Blockchain upload successful")
+        print(f"   Transaction ID: {irys_response.get('id', 'N/A')}")
+        print(f"   Gateway URL: {irys_response.get('gateway_url', 'N/A')}")
+        
+        # Step 4: Save metadata to database
+        if irys_response.get('id'):
+            success3, metadata_response = self.run_test(
+                "Save Image Metadata",
+                "POST",
+                "save-snippet-metadata",
+                200,
+                data={
+                    "wallet_address": self.test_wallet_address_1,
+                    "irys_id": irys_response['id'],
+                    "title": snippet_data["title"],
+                    "summary": snippet_data["summary"],
+                    "tags": snippet_data["tags"],
+                    "network": "devnet",
+                    "content_type": "image",
+                    "mood": snippet_data["mood"],
+                    "theme": snippet_data["theme"]
+                }
+            )
+            
+            if success3:
+                print("✅ Step 3: Metadata saved successfully")
+                print("🎉 Complete image workflow successful!")
+                return True, {
+                    "image_processing": image_response,
+                    "blockchain_upload": irys_response,
+                    "metadata_save": metadata_response
+                }
+            else:
+                print("❌ Step 3: Metadata save failed")
+                return False, {}
+        
+        return False, {}
+
+    def test_error_handling(self):
+        """Test error handling and edge cases"""
+        print("\n🚨 Testing Error Handling and Edge Cases...")
+        
+        # Test invalid image data
+        invalid_image_test = self.run_test(
+            "Invalid Image Data",
+            "POST",
+            "process-image",
+            500,  # Expecting error
+            data={
+                "title": "Invalid Image",
+                "image_data": "invalid-base64-data",
+                "content_type": "image"
+            }
+        )
+        
+        # Test empty content
+        empty_content_test = self.run_test(
+            "Empty Text Content",
+            "POST",
+            "process-text",
+            500,  # Expecting error
+            data={
+                "title": "",
+                "content": "",
+                "content_type": "text"
+            }
+        )
+        
+        # Test invalid wallet address for Irys query
+        invalid_wallet_test = self.run_test(
+            "Invalid Wallet Query",
+            "GET",
+            "irys-query/invalid-wallet-address",
+            200  # Should return empty results, not error
+        )
+        
+        return True
+
     def run_all_tests(self):
         """Run all API tests in sequence"""
         print("🚀 Starting Irys Snippet Vault API Tests with Social Features")
