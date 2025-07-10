@@ -628,69 +628,112 @@ body {
   margin-bottom: 1rem;
 }
 
-.blockchain-info {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tx-id {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  color: #00ffff;
+/* Network information and selection */
+.network-info {
   background: rgba(0, 255, 255, 0.1);
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
 
-.irys-link {
-  background: none;
-  border: none;
-  color: #8a2be2;
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 0.3s ease;
-  font-family: inherit;
-}
-
-.info-text {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.9rem;
-  text-align: center;
-  margin-top: 1rem;
-}
-
-.permanent-badge {
+.free-badge {
   background: linear-gradient(135deg, #00ff00, #008000);
   color: white;
-  padding: 0.1rem 0.4rem;
-  border-radius: 8px;
-  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
   font-weight: bold;
+}
+
+.network-option {
   margin-left: 0.5rem;
 }
 
-.warning-section {
-  margin-top: 1rem;
+.network-option small {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+}
+
+.blockchain-details {
+  margin-top: 1.5rem;
   padding: 1rem;
-  background: rgba(255, 165, 0, 0.1);
-  border: 1px solid rgba(255, 165, 0, 0.3);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
 }
 
-.warning-section .warning-text {
-  color: #ffa500;
-  font-size: 0.85rem;
-  text-align: center;
+.blockchain-details h4 {
+  color: #00ffff;
+  margin-bottom: 0.8rem;
+  font-size: 1rem;
+}
+
+.save-details-list {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-.blockchain-info h3 {
+.save-details-list li {
+  padding: 0.3rem 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+.devnet-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 255, 0, 0.1);
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  border-radius: 8px;
+}
+
+.success-text {
+  color: #00ff00;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.network-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.network-card {
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid;
+}
+
+.network-card.devnet {
+  background: rgba(0, 255, 0, 0.1);
+  border-color: rgba(0, 255, 0, 0.3);
+}
+
+.network-card.mainnet {
+  background: rgba(255, 165, 0, 0.1);
+  border-color: rgba(255, 165, 0, 0.3);
+}
+
+.network-card h4 {
   color: #00ffff;
   margin-bottom: 0.5rem;
-  font-size: 1.1rem;
+  font-size: 1rem;
+}
+
+.network-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.network-card li {
+  padding: 0.2rem 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Loading Spinner */
