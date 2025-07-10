@@ -303,12 +303,17 @@ async def summarize_snippet(request: SummarizeRequest):
 async def upload_to_irys_blockchain(request: IrysUploadRequest):
     """Upload data to REAL Irys blockchain."""
     try:
-        print(f"🔗 Uploading to Irys blockchain for wallet: {request.address}")
+        # Parse the data to get network info
+        data_obj = json.loads(request.data)
+        network = data_obj.get('network', 'devnet')
+        
+        print(f"🔗 Uploading to Irys {network} for wallet: {request.address}")
         
         # Prepare tags for blockchain storage
         tags = [
             {"name": "application-id", "value": "IrysSnippetVault"},
             {"name": "user", "value": request.address},
+            {"name": "network", "value": network},
             {"name": "signature", "value": request.signature},
             *request.tags
         ]
@@ -316,27 +321,34 @@ async def upload_to_irys_blockchain(request: IrysUploadRequest):
         # Call Irys service to upload to blockchain
         result = await call_irys_service('upload', {
             'content': request.data,
-            'tags': tags
+            'tags': tags,
+            'network': network
         })
         
-        print(f"✅ Successfully uploaded to Irys: {result['id']}")
+        print(f"✅ Successfully uploaded to Irys {network}: {result['id']}")
+        
+        # Determine gateway URL based on network
+        if network == 'devnet':
+            gateway_url = f"https://devnet.irys.xyz/{result['id']}"
+        else:
+            gateway_url = f"https://gateway.irys.xyz/{result['id']}"
         
         # Save metadata to our database for querying
         metadata = {
             "wallet_address": request.address,
             "irys_id": result['id'],
-            "gateway_url": result['gateway_url'],
+            "gateway_url": gateway_url,
             "timestamp": datetime.utcnow(),
-            "network": "irys-testnet",
+            "network": network,
             "size": result.get('size', 0)
         }
         await db.irys_uploads.insert_one(metadata)
         
         return IrysUploadResponse(
             id=result['id'],
-            gateway_url=result['gateway_url'],
+            gateway_url=gateway_url,
             timestamp=result.get('timestamp', int(datetime.utcnow().timestamp() * 1000)),
-            message="Successfully uploaded to Irys blockchain!"
+            message=f"Successfully uploaded to Irys {network}! {'FREE' if network == 'devnet' else 'Paid'} storage."
         )
         
     except Exception as e:
