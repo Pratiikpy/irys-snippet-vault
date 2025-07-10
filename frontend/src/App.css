@@ -14,8 +14,8 @@ body {
   color: #ffffff;
   line-height: 1.6;
   overflow-x: hidden;
-  /* Ensure custom cursor is inherited */
-  cursor: url('/cursor-cat.png') 16 16, auto;
+  /* Standard cursor for now */
+  cursor: auto;
 }
 
 .App {
