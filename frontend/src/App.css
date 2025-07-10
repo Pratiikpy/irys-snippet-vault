@@ -4,6 +4,8 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* Custom cursor - fallback to auto if image not available */
+  cursor: url('/cursor-cat.png') 16 16, auto;
 }
 
 body {
@@ -12,6 +14,8 @@ body {
   color: #ffffff;
   line-height: 1.6;
   overflow-x: hidden;
+  /* Ensure custom cursor is inherited */
+  cursor: url('/cursor-cat.png') 16 16, auto;
 }
 
 .App {
