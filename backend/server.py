@@ -128,11 +128,14 @@ class PublicSnippet(BaseModel):
     irys_id: str
     wallet_address: str
     username: Optional[str] = None
-    url: str
+    url: Optional[str] = None  # Optional for non-web content
     title: str
     summary: str
     tags: List[str]
     network: str
+    content_type: str = "web_snippet"
+    mood: Optional[str] = None
+    theme: Optional[str] = None
     created_at: datetime
     likes_count: int = 0
     comments_count: int = 0
