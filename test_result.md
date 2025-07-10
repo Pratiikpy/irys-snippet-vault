@@ -212,12 +212,12 @@ frontend:
         comment: "Implemented UserDiscovery component with user cards, follow buttons, and user stats"
 
   - task: "Comment system UI"
-    implemented: false
-    working: false
-    file: "/app/frontend/src/components/CommentSystem.js"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: false
         agent: "main"
@@ -225,6 +225,9 @@ frontend:
       - working: false
         agent: "main"
         comment: "Not yet implemented - requires modal or expandable comment section"
+      - working: true
+        agent: "main"
+        comment: "Implemented CommentSystem component with modal overlay, comment display, and comment input form"
 
   - task: "Enhanced snippet form integration"
     implemented: true
