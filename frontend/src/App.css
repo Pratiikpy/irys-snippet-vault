@@ -260,7 +260,7 @@ body {
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* Input fields with custom cursor */
+/* Input fields with standard cursor */
 .url-input {
   width: 100%;
   padding: 1rem;
@@ -271,14 +271,14 @@ body {
   font-size: 1rem;
   margin-bottom: 1rem;
   transition: all 0.3s ease;
-  cursor: url('/cursor-cat-text.png') 16 16, text;
+  cursor: text;
 }
 
 .url-input:focus {
   outline: none;
   border-color: #00ffff;
   box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
-  cursor: url('/cursor-cat-text.png') 16 16, text;
+  cursor: text;
 }
 
 .url-input::placeholder {
