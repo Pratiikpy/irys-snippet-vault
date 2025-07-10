@@ -621,8 +621,35 @@ body {
   margin-top: 1rem;
 }
 
-.blockchain-info .info-text {
-  margin-top: 0.5rem;
+.permanent-badge {
+  background: linear-gradient(135deg, #00ff00, #008000);
+  color: white;
+  padding: 0.1rem 0.4rem;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  margin-left: 0.5rem;
+}
+
+.warning-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255, 165, 0, 0.1);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 8px;
+}
+
+.warning-section .warning-text {
+  color: #ffa500;
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 0;
+}
+
+.blockchain-info h3 {
+  color: #00ffff;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
 }
 
 /* Loading Spinner */
