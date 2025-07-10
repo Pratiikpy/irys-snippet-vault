@@ -20,9 +20,9 @@ class IrysSnippetVaultTester:
         self.saved_snippet_id = None
         self.test_snippet_id = None
 
-    def run_test(self, name, method, endpoint, expected_status, data=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, params=None):
         """Run a single API test"""
-        url = f"{self.api_url}/{endpoint}"
+        url = f"{self.api_url}/{endpoint}" if endpoint else self.api_url
         headers = {'Content-Type': 'application/json'}
 
         self.tests_run += 1
@@ -30,9 +30,11 @@ class IrysSnippetVaultTester:
         
         try:
             if method == 'GET':
-                response = requests.get(url, headers=headers)
+                response = requests.get(url, headers=headers, params=params)
             elif method == 'POST':
                 response = requests.post(url, json=data, headers=headers)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers)
 
             success = response.status_code == expected_status
             if success:
