@@ -310,6 +310,7 @@ body {
   font-size: 1.1rem;
 }
 
+/* Snippet text display with custom cursor */
 .snippet-text {
   color: rgba(255, 255, 255, 0.8);
   line-height: 1.6;
@@ -318,6 +319,25 @@ body {
   padding: 1rem;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 8px;
+  cursor: url('/cursor-cat-text.png') 16 16, text;
+}
+
+.snippet-text::-webkit-scrollbar {
+  width: 6px;
+}
+
+.snippet-text::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.snippet-text::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.snippet-text::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 255, 0.5);
 }
 
 .summarizing {
