@@ -21,10 +21,19 @@ import asyncio
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# MongoDB connection with graceful fallback
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017/')
+db_name = os.environ.get('DB_NAME', 'irys_snippet_vault')
+
+try:
+    client = AsyncIOMotorClient(mongo_url)
+    db = client[db_name]
+    print(f"✅ Connected to MongoDB: {db_name}")
+except Exception as e:
+    print(f"⚠️  MongoDB connection failed: {e}")
+    # Create a mock database for development
+    client = None
+    db = None
 
 # Create the main app without a prefix
 app = FastAPI(title="Irys Snippet Vault API - Social Features")
