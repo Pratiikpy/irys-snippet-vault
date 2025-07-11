@@ -144,13 +144,20 @@ def start_backend():
     env = os.environ.copy()
     env['PYTHONPATH'] = str(Path.cwd()) + ":" + env.get('PYTHONPATH', '')
     
-    backend_process = subprocess.Popen([
+    # Check if we're in a resource-constrained environment (like Replit)
+    use_reload = os.environ.get('REPLIT_CLUSTER') is None
+    
+    cmd = [
         sys.executable, "-m", "uvicorn",
         "backend.server:app",
         "--host", "0.0.0.0",
-        "--port", "8000",
-        "--reload"
-    ], env=env)
+        "--port", "8000"
+    ]
+    
+    if use_reload:
+        cmd.append("--reload")
+    
+    backend_process = subprocess.Popen(cmd, env=env)
     
     return backend_process
 
