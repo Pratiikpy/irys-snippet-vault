@@ -38,10 +38,10 @@ except Exception as e:
 # Create the main app without a prefix
 app = FastAPI(title="Irys Snippet Vault API - Social Features")
 
-# Add CORS middleware for Railway
+# Add CORS middleware for Replit and local development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Railway domains
+    allow_origins=["*"],  # Allow all origins for Replit deployment
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
