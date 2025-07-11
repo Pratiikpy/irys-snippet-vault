@@ -1,0 +1,33 @@
+run = "python main.py"
+language = "python3"
+
+[env]
+PYTHONPATH = "${PYTHONPATH}:${REPL_HOME}"
+PATH = "${PATH}:${REPL_HOME}/node_modules/.bin"
+
+[nix]
+channel = "stable-23_11"
+
+[deployment]
+run = ["python", "main.py"]
+deploymentTarget = "gce"
+
+[languages]
+
+[languages.python3]
+pattern = "**/*.py"
+
+[languages.python3.languageServer]
+start = "pylsp"
+
+[languages.javascript]
+pattern = "**/*.{js,jsx,ts,tsx}"
+
+[languages.javascript.languageServer]
+start = "typescript-language-server --stdio"
+
+[gitHubImport]
+requiredFiles = [".replit", "replit.nix", "main.py"]
+
+[interpreter]
+command = ["python3", "main.py"]
